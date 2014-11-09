@@ -19,7 +19,7 @@ public class Client {
     static private ZkConnector zkc;
     static ObjectInputStream Sin = null;
     static ObjectOutputStream Sout = null;
-	static Hashtable<String, String> requests= new Hashtable();
+
 	private static void getConn(){
 		System.out.println("In getConn");
 		String resultData;
@@ -40,12 +40,12 @@ public class Client {
 		String[] temp = resultData.split(":");
 
 		try{
-		socket = new Socket(temp[0], Integer.parseInt(temp[1]));
+			socket = new Socket(temp[0], Integer.parseInt(temp[1]));
 
-		Sout = null;
-		Sin = null;
+			Sout = null;
+			Sin = null;
 
-		System.out.println("getConn Successful host:"+temp[0]+" port:"+temp[1]);
+			System.out.println("getConn Successful host:"+temp[0]+" port:"+temp[1]);
 
 		}catch(Exception e)
 		{
@@ -73,61 +73,71 @@ public class Client {
 
 		
 		Scanner in = new Scanner(System.in);
-		String i = "search";
 		String q = "q";
-		String trim;
-		String s;	 
-		int re=0;
-		while(true){
-			System.out.println("Enter new job, \"search\" to search for job with Tracking ID, \"q\" to quit");
+		String run = "run";
 
-			s = in.nextLine();
-			trim =s.trim();
-			re=0;
+		while(true){
+			System.out.println("Enter:");
+			System.out.println("\"run\" followed by an input file and Q values to start a new job");
+			System.out.println("ex: \"run inputfile.txt 1-3,5\" would run npairs with inputfile,txt with Q values 1,2,3,5");
+			System.out.println("\"q\" to quit");
+
+			String s = in.nextLine();
+			String userCommand = s.trim();
+
 			String Request=null;
 			String Reply=null;
-			if(i.equalsIgnoreCase(trim)){
 
-				System.out.println("Enter Tracking ID");
-				s = in.nextLine();
-				trim =s.trim();
+			List<String> commandComponents = Arrays.asList(userCommand.split(" "));
+			String type = commandComponents.get(0);
+
+			if(run.equalsIgnoreCase(type)){
+			
+				String inputFile = null;
+				String qValues = null;
+					
+				if (commandComponents.size() >= 3) {
+					inputFile = commandComponents.get(1);
+					qValues = commandComponents.get(2);
+				} else if (commandComponents.size() == 2) {
+					inputFile = commandComponents.get(1);
+				}
+
+				if (inputFile == null) {
+					System.out.println("Enter input file");
+					inputFile = in.nextLine().trim();
+				}
+
+				if (qValues == null) {
+					System.out.println("Enter Q values");
+					qValues = in.nextLine().trim();
+				}
 	
-				Request = "seq:"+trim;
+				Request = "run:" + inputFile + ":" + qValues;
 
-
-			}else if(q.equalsIgnoreCase(trim)){
+			}else if(q.equalsIgnoreCase(type)){
 
 				System.out.println("Quitting");
 				// quit
 				return;
 
 			}else{
-				String k = requests.get(trim);
-				if(k==null)
-				{
-					re =1;
-					Request = "req:"+trim;
-				}else{
-			
-					Request = "seq:"+k;
-				}
-				
+				System.out.println("Unknown request");
+				continue;
 			}
 
 			if(socket == null){
-
 				getConn();
-
 			}
+
 			int retry =1;
 			System.out.println("Request is "+Request);
-			while(retry ==1){
-				if(socket==null){
+			while(retry == 1){
+				if (socket == null) {
 					try {
 						Thread.sleep(1000);
 					} catch (Exception ex) {}
 					getConn();
-
 				}				
 
 				try {
@@ -135,6 +145,7 @@ public class Client {
 						System.out.println("new Sout created");
 						Sout = new ObjectOutputStream(socket.getOutputStream());
 					}
+
  					Sout.writeObject(Request); 
  				
 
@@ -145,31 +156,21 @@ public class Client {
  					Reply = (String) Sin.readObject();
  				
 
- 				}
- 				catch(Exception e){
+ 				} catch (Exception e) {
 					System.out.println("Exception at writeObject/readObject");
 					e.printStackTrace();
+
 					try {
 						Thread.sleep(5000);
 					} catch (Exception ex) {}
+
 					getConn();
 					continue;
  				}
 				retry =0;
-
-
 			} 
-			
-			if(re==1){
-				String [] sp = Request.split(":"); 			
-				String [] rp = Reply.split(":"); 			
-				requests.put(sp[1],rp[1].trim());
-			}
-
-			if(Reply.equalsIgnoreCase("ERROR"))
-				Reply = "Tracking ID not found";
+		
 			System.out.println(Reply);
-
 			try{
 				Sin.close();
 				Sout.close();
@@ -183,9 +184,6 @@ public class Client {
 				socket = null;
 			}	
 		}
-
-
-
 
 
 	}
