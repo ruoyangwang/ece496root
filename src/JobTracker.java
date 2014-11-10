@@ -26,7 +26,7 @@ import org.apache.zookeeper.Watcher.Event.EventType;
  * 6. Assign work to workers by requesting scheduler. 
  */
 
-public class jobTracker {
+public class JobTracker {
 
     private static ZkConnector zkc;
 	// Whether we are the primary or backup job tracker
@@ -41,24 +41,26 @@ public class jobTracker {
 
     public static ServerSocket serverSocket = null;
 
-    final String JOB_TRACKER_PATH = "/jobTracker";
-	final String WORKER_PATH = "/worker";
-	final String JOBS_PATH = "/jobs";
-	final String SEQ_PATH = "/seq";
-	final String RESULT_PATH = "/result";
-	final String JOBPOOL_PATH = "/jobpool";
+    final static String JOB_TRACKER_PATH = "/jobTracker";
+	final static String WORKER_PATH = "/worker";
+	final static String JOBS_PATH = "/jobs";
+	final static String SEQ_PATH = "/seq";
+	final static String RESULT_PATH = "/result";
+	final static String JOBPOOL_PATH = "/jobpool";
 
 	/** 
      * constructor for job tracker
      */
-    public jobTracker(String hosts) {
+    public JobTracker(String hosts) {
+
+ 		System.out.println("constructing job tracker: " + hosts);
         zkc = new ZkConnector();
         try {
             zkc.connect(hosts);
         } catch(Exception e) {
             System.out.println("Zookeeper can not connect "+ e.getMessage());
         }
- 	
+ 		System.out.println("Zookeeper connected");
 		// initialize watchers
         jobTrackerWatcher = new Watcher() { // Anonymous Watcher
                             @Override
@@ -89,11 +91,41 @@ public class jobTracker {
                             } };
     }
 
+	public static synchronized Integer getSequenceNum(){
+    	Stat stat = null;
+    	stat = zkc.exists(SEQ_PATH, null);
+    	if(stat == null){
+			System.out.println("Critical Error!! in getSequenceNum. " + SEQ_PATH + " does not exist");
+    		return null;
+    	}
+
+		String seq = zkc.getData(SEQ_PATH, null, stat);
+		
+		if(seq != null){
+			// handle the result
+			Integer parsed;
+            parsed = Integer.parseInt(seq);
+
+			Integer newValue;
+			newValue = new Integer(parsed.intValue()+1);
+
+			Stat stats = zkc.setData(SEQ_PATH, newValue.toString(), -1);
+			if(stats == null){
+				System.out.println("Critical Error!! in getSequenceNum. " + SEQ_PATH + " can not set new value");
+				return null;
+			}
+			return parsed;
+		}else{
+			System.out.println("Critical Error!! in getSequenceNum. can not get num");
+			return null;
+		}
+	}
+
 
 	/**
 	 * Create a persistent foler with the specified path and value.
 	 */
-    private void createOnePersistentFolder(String Path, String value){	
+    private static synchronized void createOnePersistentFolder(String Path, String value){	
 		// create folder
  		Stat stat = zkc.exists(Path,null);
         if (stat == null) { 
@@ -132,9 +164,28 @@ public class jobTracker {
     }
 
 	/**
-	 * Adds a job back to the job pool
+	 * Adds a job to the job pool
 	 */
-	private void addToJobPool(String jobId, Stromg taskId, String data) {
+	public static synchronized void addJobIdToPool(String jobId) {
+		Stat stat = zkc.exists(JOBPOOL_PATH, null);
+
+		if (stat != null) {
+
+			String addP = JOBPOOL_PATH + "/" + jobId;
+		    System.out.println("Adding job id to jobpool: " + addP);
+
+			createOnePersistentFolder(addP, null);
+
+		} else {
+			System.out.println(JOBPOOL_PATH + " does not exist in assignWork - 1");
+		}
+	}
+
+
+	/**
+	 * Adds a job to the job pool
+	 */
+	public static synchronized void addToJobPool(String jobId, String taskId, String data) {
 		Stat stat = zkc.exists(JOBPOOL_PATH, null);
 
 		if (stat != null) {
@@ -148,10 +199,10 @@ public class jobTracker {
 				// add job back to the job pool
 				createOnePersistentFolder(addP2, data);
 			} else {
-				System.out.println(addP +" does not exist in assignWork - 2");
+				System.out.println(addP + " does not exist in assignWork - 2");
 			}
 		} else {
-			System.out.println(addToPath +" does not exist in assignWork - 1");
+			System.out.println(JOBPOOL_PATH + " does not exist in assignWork - 1");
 		}
 	}
 
@@ -160,7 +211,7 @@ public class jobTracker {
 	 */
 	private void reassignWork(String removedWorker){
 		// assigned job to the removed worker
-		List<String> assignedList = zkc.getChildren(jobPath + "/" + removedWorker);
+		List<String> assignedList = zkc.getChildren(JOBS_PATH + "/" + removedWorker);
 		
 		Iterator l;
 		l=assignedList.listIterator();
@@ -184,20 +235,20 @@ public class jobTracker {
 
 				String data = zkc.getData(rPath, null, stat);
 		
-				if(newData != null){
+				if(data != null){
 
 					String [] temp = jobTaskId.split("-");
 					String jobId = temp[0];
 					String taskId = temp[1];
 
 					System.out.println("Adding into jobpool jobTaskId:" + jobTaskId + " data:" + data);
-					addToJobPool(jobId, taskId, data)
+					addToJobPool(jobId, taskId, data);
 
 				}else{
 					System.out.println("Critical Error!! in reassignWork. can not get data");
 				}
 				System.out.println("Deleting job: " + rPath);
-				zkc.delete(rPath);
+				zkc.delete(rPath, -1);
 			}
 		}
 	}
@@ -242,7 +293,7 @@ public class jobTracker {
 			if(stat == null){
 				System.out.println("Worker left...");
 				reassignWork(r);
-				zkc.delete(rPath);
+				zkc.delete(rPath, -1);
 			}
 		}
 	}
@@ -298,7 +349,6 @@ public class jobTracker {
 	// arg[0] is the port of zookeeper
 	// arg[1] is the port for job tracker to listen to.
     public static void main(String[] args) {
-      
         if (args.length != 2) {
             System.out.println("Usage: java -classpath lib/zookeeper-3.3.2.jar:lib/log4j-1.2.15.jar:. jobTracker zkServer:zkPort jobTrackerPort");
             return;
@@ -315,6 +365,7 @@ public class jobTracker {
 			return;
 		}		
 		
+		String zookeeperLocation = args[0];
 		String portToListen = args[1];
 		String myHostName;
 
@@ -325,10 +376,10 @@ public class jobTracker {
 			return;
 		}		
 
-		jobTrackerServerInfo = host+":"+port;
+		jobTrackerServerInfo = myHostName + ":" + portToListen;
         System.out.println("Location of jobTracker: "+jobTrackerServerInfo);
 
-        jobTracker t = new jobTracker(portToListen);   
+        JobTracker t = new JobTracker(zookeeperLocation);   
 		
         System.out.println("Sleeping...");
         t.tryToBeBoss();
@@ -339,9 +390,9 @@ public class jobTracker {
         while (boss==1) {
 				System.out.println("Listening...");
 			try{Thread.sleep(5000);
-        		new handleClient(serverSocket.accept()).start();     
+        		new HandleClient(serverSocket.accept()).start();     
 			}catch (Exception e){
-				System.out.println("Failed to create new handleClient");
+				System.out.println("Failed to create new HandleClient");
 			}		   	
         }
 
