@@ -1,3 +1,12 @@
+/*
+ * Responsibility for Worker:
+ * 1.Run Benchmark of current available node, get speed information for Scheduler
+ * 2.Get Hardware information and Benchmark information of the current node
+ * 3.Create child directories 'Worker1, Worker2, etc..' for nodes
+ * 4.Push a job from 'Queued Job' into 'Current Job' and execute it
+ * 5.Watch Current Job, if it's done delete it
+ * 6.Update result in 'results'
+ */
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -21,15 +30,33 @@ import org.apache.zookeeper.data.Stat;
 
 public class Worker{	//worker node, need to know hardware configurations
 	static ZkConnector zkc;
-	String Workerid;
+
+    final static String JOB_TRACKER_PATH = "/jobTracker";
+	final static String WORKER_PATH = "/worker";
+	final static String JOBS_PATH = "/jobs";
+	final static String RESULT_PATH = "/result";
+	final static String JOBPOOL_PATH = "/jobpool";
+
+	Watcher fsWatcher;
+	Watcher WorkerWatcher;
+	String Workerid=null;			//workerid of this node(worker)
 	String[] hardware_info;
 	long core=0, mem_total_JVM, mem_free, mem_max, mem_cur_JVM;
 	long maxMemory;
 	
 	public static void main(String[] args) throws IOException, KeeperException, InterruptedException, NumberFormatException, ClassNotFoundException {
+		if (args.length != 2) {
+            System.out.println("Usage: java -classpath lib/zookeeper-3.3.2.jar:lib/log4j-1.2.15.jar:. Worker zkServer:zkPort jobTrackerPort");
+            return;
+        }
 		List<String> jobs = null, tasks = null; 
 		Worker worker = new Worker(args[0]);
 	    worker.Hardware_config();
+
+		System.out.println("Sleeping...");
+		while (true) {
+		    try{ Thread.sleep(5000); } catch (Exception e) {}
+		} 
 	 }
 	
 	public Worker(String hosts){
@@ -38,19 +65,26 @@ public class Worker{	//worker node, need to know hardware configurations
             zkc.connect(hosts);
             
 			Stat stats = zkc.exists("/worker",null);
-			if(stats==null) {						//create repository
+			if(stats==null) {						//create worker root directory
 				zkc.getZooKeeper().create("/worker", null, ZkConnector.acl, CreateMode.PERSISTENT);
 				System.out.println("/worker created");
 			}
 			
+			//create child directory of worker, assign id to that worker
 			String path = zkc.getZooKeeper().create("/worker/worker-", null, ZkConnector.acl, CreateMode.EPHEMERAL_SEQUENTIAL);
 			String[] temp = path.split("-");
-			Workerid = temp[1];			//get workerid of this worker
+			Workerid = temp[1];			//create workerid of this worker
 			
         } catch(Exception e) {
             System.out.println("Zookeeper connect "+ e.getMessage());
         }
 		
+        WorkerWatcher = new Watcher(){
+        	 @Override
+             public void process(WatchedEvent event) {
+        		 		;		//do something to handle event, need to figure out how to write it
+					}			
+        };
 	}
 	
 	/*private execute{
