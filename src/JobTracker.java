@@ -217,7 +217,7 @@ public class JobTracker {
 		
 		Iterator l;
 		l = assignedList.listIterator();
-		Hashtable<String,String> newWork = new Hashtable();
+		Hashtable<String,String> newWork = new Hashtable<String,String>();
 
 		while(l.hasNext()){
 			// job-task name
@@ -244,7 +244,7 @@ public class JobTracker {
 					System.out.println("Adding into jobpool jobTaskId:" + jobTaskId + " data:" + data);
 
 					// task id is n value
-					JobObject j = new JobObject(Integer.parseInt(jobId), Integer.parseInt(taskId), null);
+					JobObject j = new JobObject(Integer.parseInt(jobId), Integer.parseInt(taskId));
 					j.parseJobString(data);
 
 					addToJobPool(j);
