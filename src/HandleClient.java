@@ -20,7 +20,7 @@ public class HandleClient extends Thread{
 	private String newRequest(String inputFileName, String nValues){
 
 			// get a job id
-			String jobID = JobTracker.getSequenceNum().toString();
+			Integer jobID = JobTracker.getSequenceNum();
 			
 			// parse nValues
 			ArrayList<Integer> nValueList = new ArrayList<Integer>();
@@ -42,15 +42,15 @@ public class HandleClient extends Thread{
 			}
 			
 			// create dir under jobpool
-			JobTracker.addJobIdToPool(jobID);
+			JobTracker.addJobIdToPool(jobID.toString());
 
 			for (Integer q: nValueList) {
-				String qString = q.toString();
-				String data = inputFileName + ":" + q.toString();
-				JobTracker.addToJobPool(jobID, qString, data);
+				
+				JobObject j = new JobObject(jobID, q, inputFileName);
+				JobTracker.addToJobPool(j);
 			}
 
-			return jobID;
+			return jobID.toString();
 	}
 
 	public void run() {

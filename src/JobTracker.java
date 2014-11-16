@@ -185,24 +185,26 @@ public class JobTracker {
 	/**
 	 * Adds a job to the job pool
 	 */
-	public static synchronized void addToJobPool(String jobId, String taskId, String data) {
+	public static synchronized void addToJobPool(JobObject job) {
 		Stat stat = zkc.exists(JOBPOOL_PATH, null);
 
 		if (stat != null) {
 
-			String addP = JOBPOOL_PATH + "/" + jobId;
+			String addP = JOBPOOL_PATH + "/" + job.jobId.toString();
 		    System.out.println("assigning job " + addP);
 			Stat stat2 = zkc.exists(addP, null);
 
 			if(stat2!=null){
-				String addP2 = addP + "/" + taskId;
+
+				String addP2 = addP + "/" + job.nValue.toString();
 				// add job back to the job pool
-				createOnePersistentFolder(addP2, data);
+				createOnePersistentFolder(addP2, job.toJobString());
+
 			} else {
-				System.out.println(addP + " does not exist in assignWork - 2");
+				System.out.println(addP + " does not exist in addToJobPool - 2");
 			}
 		} else {
-			System.out.println(JOBPOOL_PATH + " does not exist in assignWork - 1");
+			System.out.println(JOBPOOL_PATH + " does not exist in addToJobPool - 1");
 		}
 	}
 
@@ -214,15 +216,13 @@ public class JobTracker {
 		List<String> assignedList = zkc.getChildren(JOBS_PATH + "/" + removedWorker);
 		
 		Iterator l;
-		l=assignedList.listIterator();
+		l = assignedList.listIterator();
 		Hashtable<String,String> newWork = new Hashtable();
 
 		while(l.hasNext()){
 			// job-task name
 			String jobTaskId = (String)l.next();
 			Stat stat = null;
-
-			// NOTE: Needs modification. have sub dirs
 
 			String rPath = JOBS_PATH + "/" + removedWorker + "/" + jobTaskId;
 			stat = zkc.exists(rPath, null); // see if node in jobList still exists in workerList
@@ -242,7 +242,12 @@ public class JobTracker {
 					String taskId = temp[1];
 
 					System.out.println("Adding into jobpool jobTaskId:" + jobTaskId + " data:" + data);
-					addToJobPool(jobId, taskId, data);
+
+					// task id is n value
+					JobObject j = new JobObject(Integer.parseInt(jobId), Integer.parseInt(taskId), null);
+					j.parseJobString(data);
+
+					addToJobPool(j);
 
 				}else{
 					System.out.println("Critical Error!! in reassignWork. can not get data");
@@ -259,8 +264,8 @@ public class JobTracker {
 	 * Create dir for workers under /jobs if they newly joint
 	 */
 	private void handleJoinedWorkers (){
-		// NOTE: Try null as second param.
-		List<String> workerList = zkc.getChildren(WORKER_PATH, workerWatcher); 
+		// NOTE: Try the watch as second param.
+		List<String> workerList = zkc.getChildren(WORKER_PATH); 
 
 		ListIterator l;
 		l=workerList.listIterator();
@@ -276,6 +281,7 @@ public class JobTracker {
 
 				//create worker
 				createOnePersistentFolder(wPath, null);
+
 			}
 		}
 	}
