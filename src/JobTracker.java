@@ -190,13 +190,13 @@ public class JobTracker {
 
 		if (stat != null) {
 
-			String addP = JOBPOOL_PATH + "/" + job.jobId.toString();
+			String addP = job.getJobpoolParentPath();
 		    System.out.println("assigning job " + addP);
 			Stat stat2 = zkc.exists(addP, null);
 
 			if(stat2!=null){
 
-				String addP2 = addP + "/" + job.nValue.toString();
+				String addP2 = job.getJobpoolPath();
 				// add job back to the job pool
 				createOnePersistentFolder(addP2, job.toJobDataString());
 
@@ -236,16 +236,11 @@ public class JobTracker {
 				String data = zkc.getData(rPath, null, stat);
 		
 				if(data != null){
-
-					String [] temp = jobTaskId.split("-");
-					String jobId = temp[0];
-					String taskId = temp[1];
-
-					System.out.println("Adding into jobpool jobTaskId:" + jobTaskId + " data:" + data);
-
 					// task id is n value
-					JobObject j = new JobObject(Integer.parseInt(jobId), Integer.parseInt(taskId));
+					JobObject j = new JobObject();
 					j.parseJobString(data);
+
+					System.out.println("Adding into jobpool, data:" + data);
 
 					addToJobPool(j);
 

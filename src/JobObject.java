@@ -21,7 +21,10 @@ public class JobObject {
 
 	public final String DELIMITER = ":";
 
-	// constuctor
+	public final String JOBPOOL_PATH = "/jobpool";
+
+	// constuctors
+	public JobObject(){};
 
     public JobObject(Integer jobId, Integer nValue) {
 		this.jobId = jobId;
@@ -53,6 +56,19 @@ public class JobObject {
 		this.outputFile = partial[2];
 		this.completionTime = Integer.parseInt(partial[3]);
 	}
+
+	public String getJobNodeName() {
+		return jobId.toString() + "-" + nValue.toString();
+	}
+
+	public String getJobpoolParentPath() {
+		return JOBPOOL_PATH + "/" + jobId.toString();
+	}
+
+	public String getJobpoolPath() {
+		return getJobpoolParentPath() + "/" + getJobNodeName();
+	}
+
 
 
 	// Get the string representation of the data in the znode

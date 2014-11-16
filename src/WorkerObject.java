@@ -8,7 +8,8 @@ public class WorkerObject {
 
 	public final String DELIMITER = ":";
 
-	public Worker(String workerName) {
+	public WorkerObject(String workerName) {
+		// worker name including the id
 		this.workerName = workerName;
 	}
 
