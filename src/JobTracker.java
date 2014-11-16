@@ -198,7 +198,7 @@ public class JobTracker {
 
 				String addP2 = addP + "/" + job.nValue.toString();
 				// add job back to the job pool
-				createOnePersistentFolder(addP2, job.toJobString());
+				createOnePersistentFolder(addP2, job.toJobDataString());
 
 			} else {
 				System.out.println(addP + " does not exist in addToJobPool - 2");

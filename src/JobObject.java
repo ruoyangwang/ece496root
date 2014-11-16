@@ -34,6 +34,7 @@ public class JobObject {
 		this.inputFile = inputFile;
     };
 
+	// Parse job data string into object.
 	public void parseJobString(String jobString) {
 		String [] partial = jobString.split(DELIMITER);
 		
@@ -42,6 +43,8 @@ public class JobObject {
 		this.inputFile = partial[2];
 	}
 
+	// Parse result data string into object.
+	// TODO: this is not yet used
 	public void parseResultString(String resultString) {
 		String [] partial = resultString.split(DELIMITER);
 		
@@ -51,13 +54,20 @@ public class JobObject {
 		this.completionTime = Integer.parseInt(partial[3]);
 	}
 
-	public String toJobString() {
-		// Formate: "nValue:inputFile"
+
+	// Get the string representation of the data in the znode
+	// when this job is in jobpool/worker
+	public String toJobDataString() {
+		// Formate: "jobId:nValue:inputFile"
 		return jobId.toString() + DELIMITER + nValue.toString() + DELIMITER + inputFile;
 	}
 	
-	public String toResultString() {
-		// Formate: "nValue:outputFile:completionTime"
+
+	// TODO: this is not yet used
+	// Get the string representation of the data in the znode
+	// when this job is in result
+	public String toResultDataString() {
+		// Formate: "jobId:nValue:outputFile:completionTime"
 		return jobId.toString() + DELIMITER + nValue.toString() + DELIMITER + outputFile + DELIMITER + completionTime.toString();
 	}
 
