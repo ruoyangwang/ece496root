@@ -1,11 +1,15 @@
+import java.util.*;
+
 public class WorkerObject {
 
 	// name of the worker. ie: dir name for this worker
-	public String workerName;
+	private String workerName;
 
 	// performance metrics -- not yet used
-	public Integer benchmarkTime;
-
+	public long benchmarkTime;
+	
+	public String[] hardwareInfo;
+	
 	public final String DELIMITER = ":";
 
 	public WorkerObject(String workerName) {
@@ -17,7 +21,10 @@ public class WorkerObject {
 	public String getNodeName() {
 		return workerName;
 	}
-
+	
+	public void setHardwareInfo(String[] temp){
+		hardwareInfo = Arrays.copyOf( temp, temp.length );
+	}
 	// TODO: this is not yet used		
 	// Parse the data string to get object representation
 	public void parseNodeString(String nodeDataString) {
@@ -27,7 +34,7 @@ public class WorkerObject {
 	// TODO: this is not yet used		
 	// Get the string representation of the data in the znode.
 	public String toNodeDataString() {
-		return benchmarkTime.toString();
+		return String.valueOf(benchmarkTime);
 	}
 
 }
