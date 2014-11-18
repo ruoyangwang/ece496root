@@ -53,8 +53,25 @@ public class Worker{	//worker node, need to know hardware configurations
             System.out.println("Usage: java -classpath lib/zookeeper-3.3.2.jar:lib/log4j-1.2.15.jar:. Worker zkServer:zkPort WorkerPort");
             return;
         }
+		
+		/*try{
+			// create a server socket to listen on
+        	serverSocket = new ServerSocket(Integer.parseInt(args[1]));
+		}catch (Exception e){
+			System.out.println("Failed to create server socker");
+			return;
+		}	*/
 		List<String> jobs = null, tasks = null; 
-		Worker worker = new Worker(args[0]);
+		String myHostName;
+		String WorkerServerInfo;
+		try{
+			myHostName = InetAddress.getLocalHost().getHostName();
+		}catch (Exception e){
+			System.out.println("Failed to get host name");
+			return;
+		}		
+		WorkerServerInfo = myHostName+ ":" + args[1];
+		Worker worker = new Worker(args[0],WorkerServerInfo);
 
 		System.out.println("Sleeping...");
 		while (true) {
@@ -62,7 +79,7 @@ public class Worker{	//worker node, need to know hardware configurations
 		} 
 	 }
 	
-	public Worker(String hosts){
+	public Worker(String hosts, String WorkerServerInfo){
 		benchmarkTime=benchmark();
 		Hardware_config();
 		zkc = new ZkConnector();
@@ -83,16 +100,14 @@ public class Worker{	//worker node, need to know hardware configurations
 	                 switch (event.getType()){
 	                 	case NodeChildrenChanged:
 	                 		try {
-	                            if (path.equals(Workerpath)){
+	                            //if (path.equals(Workerpath)){
 	                            	 	try{ Thread.sleep(1000); } catch (Exception e) {}	//assume this is running the child node for now
 	                            		//now need to delete the directory
 	                            		zkc.delete(Workerpath,-1);
 	                            		//assume now updating result to RESULT_PATH directory
-	                            		Create_WorkerObj();
+	                            		Create_WorkerObj(Workerid);
+	                           // }
 	                            		
-	                            }
-	                            		
-
 	                        } catch (Exception e) {
 	                            e.printStackTrace();
 	                        }
@@ -107,7 +122,7 @@ public class Worker{	//worker node, need to know hardware configurations
 			Workerpath = zkc.getZooKeeper().create("/worker/worker-", null, ZkConnector.acl, CreateMode.EPHEMERAL_SEQUENTIAL);
 			String[] temp = Workerpath.split("-");
 			Workerid = temp[1];			//create workerid of this worker
-			zkc.getData(Workerpath, WorkerWatcher, null );
+			zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
 			
         } catch(Exception e) {
             System.out.println("Zookeeper connect "+ e.getMessage());
@@ -116,12 +131,19 @@ public class Worker{	//worker node, need to know hardware configurations
        
 	}
 	
-	
-	private void Create_WorkerObj(){
-		String wkname= "worker-"+Workerid;
-		WorkerObject NewObject= new WorkerObject(wkname);
-		NewObject.benchmarkTime= benchmarkTime;
+	public static synchronized void addToFreeWorker(WorkerObject wk){
 		
+		
+		
+	}
+	
+	
+	private void Create_WorkerObj(String wkid){
+			String wkname= "worker-"+wkid;
+			WorkerObject wkObject= new WorkerObject(wkname);
+			wkObject.benchmarkTime= benchmarkTime;
+			wkObject.hardwareInfo= this.hardware_info;
+			addToFreeWorker(wkObject);
 		
 	}
 	
