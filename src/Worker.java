@@ -49,8 +49,8 @@ public class Worker{	//worker node, need to know hardware configurations
 	long benchmarkTime;
 	
 	public static void main(String[] args) throws IOException, KeeperException, InterruptedException, NumberFormatException, ClassNotFoundException {
-		if (args.length != 2) {
-            System.out.println("Usage: java -classpath lib/zookeeper-3.3.2.jar:lib/log4j-1.2.15.jar:. Worker zkServer:zkPort WorkerPort");
+		if (args.length != 1) {
+            System.out.println("Usage: java -classpath lib/zookeeper-3.3.2.jar:lib/log4j-1.2.15.jar:. Worker zkServer:zkPort");
             return;
         }
 		
@@ -70,7 +70,8 @@ public class Worker{	//worker node, need to know hardware configurations
 			System.out.println("Failed to get host name");
 			return;
 		}		
-		WorkerServerInfo = myHostName+ ":" + args[1];
+		WorkerServerInfo = myHostName;
+		System.out.println( args[0]);
 		Worker worker = new Worker(args[0],WorkerServerInfo);
 
 		System.out.println("Sleeping...");
@@ -179,10 +180,10 @@ public class Worker{	//worker node, need to know hardware configurations
 	   // System.out.println("Total memory available to JVM (bytes): " + 
 	       this.mem_cur_JVM = Runtime.getRuntime().totalMemory();
 	       
-	       this.hardware_info[0]=String.valueOf(this.core);
+	      /* this.hardware_info[0]=String.valueOf(this.core);
 	       this.hardware_info[1]=String.valueOf(this.mem_total_JVM);
 	       this.hardware_info[2]=String.valueOf(this.mem_max);
-	       this.hardware_info[0]=String.valueOf(this.mem_cur_JVM);
+	       this.hardware_info[0]=String.valueOf(this.mem_cur_JVM);*/
 	    
 	}
 	
