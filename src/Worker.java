@@ -2,7 +2,7 @@
  * Responsibility for Worker:
  * 1.Run Benchmark of current available node, get speed information for Scheduler
  * 2.Get Hardware information and Benchmark information of the current node
- * 3.Create one instance
+ * 3.Create one instance under workers directory
  * 4.Execute running event triggered and child has changed (
  * 5.After finish running, delete from Jobs
  * 6.Add to result in 'results' (i.e. output result, running time, hardware info, etc)
@@ -19,6 +19,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.List;
+import java.io.BufferedReader;
+import java.io.FileReader;
 
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -47,6 +49,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	long core=0, mem_total_JVM, mem_free, mem_max, mem_cur_JVM;
 	long maxMemory;
 	long benchmarkTime;
+	long executionTime;
 	
 	public static void main(String[] args) throws IOException, KeeperException, InterruptedException, NumberFormatException, ClassNotFoundException {
 		if (args.length != 1) {
@@ -68,6 +71,7 @@ public class Worker{	//worker node, need to know hardware configurations
 			myHostName = InetAddress.getLocalHost().getHostName();
 		}catch (Exception e){
 			System.out.println("Failed to get host name");
+            e.printStackTrace();
 			return;
 		}		
 		WorkerServerInfo = myHostName;
@@ -81,8 +85,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	 }
 	
 	public Worker(String hosts, String WorkerServerInfo){
-		benchmarkTime=benchmark();
-		Hardware_config();
+		//benchmarkTime=benchmark();
 		zkc = new ZkConnector();
         try {
             zkc.connect(hosts);
@@ -102,11 +105,22 @@ public class Worker{	//worker node, need to know hardware configurations
 	                 	case NodeChildrenChanged:
 	                 		try {
 	                            //if (path.equals(Workerpath)){
-	                            	 	try{ Thread.sleep(1000); } catch (Exception e) {}	//assume this is running the child node for now
-	                            		//now need to delete the directory
+			                 			long startTime = System.nanoTime();
+			                 			
+	                            	 	try{ Thread.sleep(1000); } catch (Exception e) {}	//TODO:assume this is running the child node for now
+	                            	 	
+	                            	 	long endTime = System.nanoTime();	                            		
+			                 			executionTime = (endTime - startTime);
+	                            	 	//now need to delete the directory
 	                            		zkc.delete(Workerpath,-1);
-	                            		//assume now updating result to RESULT_PATH directory
-	                            		Create_WorkerObj(Workerid);
+	                            		
+	                            		//TODO:assume now updating result to RESULT_PATH directory
+	                            		String info = Create_WorkerObj(Workerid);	//delimited string   wkid:cpucoreNumber:jobspeed
+	                            		zkc.create(
+	                                            FREE_WORKERS_PATH+"/"+Workerid,       // Path
+	                                            info,   // information
+	                                            CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
+	                                            );//zkc.getZooKeeper().create("/freeWorkers/"+Workerid, info, ZkConnector.acl, CreateMode.EPHEMERAL_SEQUENTIAL);
 	                           // }
 	                            		
 	                        } catch (Exception e) {
@@ -116,6 +130,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	                 		//;
 	                 		
 	                 }
+                     zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
 	        	 }			
 	        };
 			
@@ -132,19 +147,29 @@ public class Worker{	//worker node, need to know hardware configurations
        
 	}
 	
-	public static synchronized void addToFreeWorker(WorkerObject wk){
-		
+	public String addToFreeWorker(WorkerObject wk){
+		try{
+			Runtime r = Runtime.getRuntime();
+			r.exec("getconf _NPROCESSORS_ONLN >cpucores.txt");		//create shell object and retrieve cpucore number
+			BufferedReader br = new BufferedReader(new FileReader("cpucores.txt"));
+			wk.cpucore = br.readLine();
+			wk.executionTime= this.executionTime;
+			
+			
+			return wk.toNodeDataString();
+		}catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
 		
 		
 	}
 	
 	
-	private void Create_WorkerObj(String wkid){
+	private String Create_WorkerObj(String wkid){
 			String wkname= "worker-"+wkid;
 			WorkerObject wkObject= new WorkerObject(wkname);
-			wkObject.benchmarkTime= benchmarkTime;
-			wkObject.hardwareInfo= this.hardware_info;
-			addToFreeWorker(wkObject);
+			return addToFreeWorker(wkObject);
 		
 	}
 	
@@ -160,32 +185,6 @@ public class Worker{	//worker node, need to know hardware configurations
 			sb.append(line + "\n");
 		    }
 	}*/
-	
-	public void Hardware_config(){
-		/* Total number of processors or cores available to the JVM */
-	    //System.out.println("Available processors (cores): " + 
-	        this.core=Runtime.getRuntime().availableProcessors();
-
-	    /* Total amount of free memory available to the JVM */
-	    //System.out.println("Free memory (bytes): " + 
-	        this.mem_total_JVM=Runtime.getRuntime().freeMemory();
-
-	    /* This will return Long.MAX_VALUE if there is no preset limit */
-	        this.mem_max = Runtime.getRuntime().maxMemory();
-	    /* Maximum amount of memory the JVM will attempt to use */
-	    //System.out.println("Maximum memory (bytes): " + 
-	      //  (maxMemory == Long.MAX_VALUE ? "no limit" : maxMemory));
-
-	    /* Total memory currently available to the JVM */
-	   // System.out.println("Total memory available to JVM (bytes): " + 
-	       this.mem_cur_JVM = Runtime.getRuntime().totalMemory();
-	       
-	      /* this.hardware_info[0]=String.valueOf(this.core);
-	       this.hardware_info[1]=String.valueOf(this.mem_total_JVM);
-	       this.hardware_info[2]=String.valueOf(this.mem_max);
-	       this.hardware_info[0]=String.valueOf(this.mem_cur_JVM);*/
-	    
-	}
 	
 	
 	private long benchmark(){

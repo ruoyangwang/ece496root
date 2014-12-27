@@ -7,8 +7,8 @@ public class WorkerObject {
 
 	// performance metrics -- not yet used
 	public long benchmarkTime;
-	
-	public String[] hardwareInfo;
+	public long executionTime;
+	public String cpucore;
 	
 	public final String DELIMITER = ":";
 
@@ -22,19 +22,20 @@ public class WorkerObject {
 		return workerName;
 	}
 	
-	public void setHardwareInfo(String[] temp){
+	/*public void setHardwareInfo(String[] temp){
 		hardwareInfo = Arrays.copyOf( temp, temp.length );
-	}
+	}*/
 	// TODO: this is not yet used		
 	// Parse the data string to get object representation
 	public void parseNodeString(String nodeDataString) {
-		benchmarkTime = Integer.parseInt(nodeDataString);
+		//benchmarkTime = Integer.parseInt(nodeDataString);
 	} 
 
 	// TODO: this is not yet used		
 	// Get the string representation of the data in the znode.
 	public String toNodeDataString() {
-		return String.valueOf(benchmarkTime);
+		String buffer = this.workerName+ this.DELIMITER+ this.cpucore+ this.DELIMITER+this.executionTime;
+		return buffer;
 	}
 
 }
