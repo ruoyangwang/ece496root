@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.InputStreamReader;
 
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -105,12 +106,24 @@ public class Worker{	//worker node, need to know hardware configurations
 	                 	case NodeChildrenChanged:
 	                 		try {
 	                            //if (path.equals(Workerpath)){
-			                 			long startTime = System.nanoTime();
+			                 		long startTime = System.nanoTime();
 			                 			
-	                            	 	try{ Thread.sleep(1000); } catch (Exception e) {}	//TODO:assume this is running the child node for now
+	                            	 	try{ 
+										//mock of execution, depends on where we put zookeeper and NPAIRS executables we can change shell command 
+										String command = "sleep 10";				
+										Process p = Runtime.getRuntime().exec(command);
+										p.waitFor();		//create shell object and retrieve cpucore number
+										BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+
+
+									
+										//Thread.sleep(1000); 
+									} catch (Exception e) {
+										e.printStackTrace();
+									}	//TODO:assume this is running the child node for now
 	                            	 	
 	                            	 	long endTime = System.nanoTime();	                            		
-			                 			executionTime = (endTime - startTime);
+			                 		executionTime = (endTime - startTime);
 	                            	 	//now need to delete the directory
 	                            		zkc.delete(Workerpath,-1);
 	                            		
@@ -149,14 +162,15 @@ public class Worker{	//worker node, need to know hardware configurations
 	
 	public String addToFreeWorker(WorkerObject wk){
 		try{
-			Runtime r = Runtime.getRuntime();
-			r.exec("getconf _NPROCESSORS_ONLN >cpucores.txt");		//create shell object and retrieve cpucore number
-			BufferedReader br = new BufferedReader(new FileReader("cpucores.txt"));
+			Process p = Runtime.getRuntime().exec("getconf _NPROCESSORS_ONLN");
+    			p.waitFor();		//create shell object and retrieve cpucore number
+			BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
 			wk.cpucore = br.readLine();
 			wk.executionTime= this.executionTime;
 			
 			
 			return wk.toNodeDataString();
+		
 		}catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -173,18 +187,6 @@ public class Worker{	//worker node, need to know hardware configurations
 		
 	}
 	
-	/*private execute{
-		  	p = Runtime.getRuntime().exec("host -t a " + domain);
-		    p.waitFor();
-		 
-		    BufferedReader reader = 
-		         new BufferedReader(new InputStreamReader(p.getInputStream()));
-		 
-		    String line = "";			
-		    while ((line = reader.readLine())!= null) {
-			sb.append(line + "\n");
-		    }
-	}*/
 	
 	
 	private long benchmark(){
