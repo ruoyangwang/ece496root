@@ -16,7 +16,13 @@ public class test{
 		wk.cpucore = wk.addToFreeWorker();
 		System.out.println(wk.cpucore);
 		System.out.println(wk.nodeToString());
-
+		String holder=wk.nodeToString();
+		String[] tokens = holder.split(wk.DELIMITER);
+		wk.workerName= tokens[0];
+		wk.cpucore=tokens[1];
+		wk.executionTime=Long.valueOf(tokens[2]).longValue() ;
+		System.out.println(wk.workerName);
+		System.out.println(wk.executionTime);
 	}
 	
 

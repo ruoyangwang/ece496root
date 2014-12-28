@@ -28,7 +28,10 @@ public class WorkerObject {
 	// TODO: this is not yet used		
 	// Parse the data string to get object representation
 	public void parseNodeString(String nodeDataString) {
-		//benchmarkTime = Integer.parseInt(nodeDataString);
+		String[] tokens = nodeDataString.split(DELIMITER);
+		this.workerName= tokens[0];
+		this.cpucore=tokens[1];
+		this.executionTime=Long.valueOf(tokens[2]).longValue();
 	} 
 
 	// TODO: this is not yet used		
