@@ -34,11 +34,12 @@ import org.apache.zookeeper.data.Stat;
 
 public class Worker{	//worker node, need to know hardware configurations
 	static ZkConnector zkc;
-
+	static WorkerObject wk;
     final static String JOB_TRACKER_PATH = "/jobTracker";
 	final static String WORKER_PATH = "/worker";
 	final static String JOBS_PATH = "/jobs";
 	final static String RESULT_PATH = "/result";
+	final static String SEQ_PATH = "/seq";
 	final static String JOBPOOL_PATH = "/jobpool";
 	final static String FREE_WORKERS_PATH = "/freeWorkers";
 
@@ -46,11 +47,9 @@ public class Worker{	//worker node, need to know hardware configurations
 	Watcher WorkerWatcher;
 	String Workerid=null;			//workerid of this node(worker)
 	String Workerpath=null;
-	String[] hardware_info;
-	long core=0, mem_total_JVM, mem_free, mem_max, mem_cur_JVM;
-	long maxMemory;
-	long benchmarkTime;
-	long executionTime;
+	
+	long benchmarkTime = 0;
+	long executionTime = 0;
 	
 	public static void main(String[] args) throws IOException, KeeperException, InterruptedException, NumberFormatException, ClassNotFoundException {
 		if (args.length != 1) {
@@ -77,8 +76,9 @@ public class Worker{	//worker node, need to know hardware configurations
 		}		
 		WorkerServerInfo = myHostName;
 		System.out.println( args[0]);
-		Worker worker = new Worker(args[0],WorkerServerInfo);
-
+		Worker wk = new Worker(args[0],WorkerServerInfo);
+		wk.createPersistentFolders();
+		wk.Building();
 		System.out.println("Sleeping...");
 		while (true) {
 		    try{ Thread.sleep(5000); } catch (Exception e) {}
@@ -128,11 +128,13 @@ public class Worker{	//worker node, need to know hardware configurations
 	                            		zkc.delete(Workerpath,-1);
 	                            		
 	                            		//TODO:assume now updating result to RESULT_PATH directory
-	                            		String info = Create_WorkerObj(Workerid);	//delimited string   wkid:cpucoreNumber:jobspeed
-	                            		zkc.create(
-	                                            FREE_WORKERS_PATH+"/"+Workerid,       // Path
+	                            		
+									Update_WorkerObj();	//delimited string   wkid:cpucoreNumber:jobspeed
+									String info = wk.toNodeDataString();
+	                            		zkc.setData(
+	                                            FREE_WORKERS_PATH+":"+Workerid,       // Path
 	                                            info,   // information
-	                                            CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
+	                                            -1
 	                                            );//zkc.getZooKeeper().create("/freeWorkers/"+Workerid, info, ZkConnector.acl, CreateMode.EPHEMERAL_SEQUENTIAL);
 	                           // }
 	                            		
@@ -147,11 +149,6 @@ public class Worker{	//worker node, need to know hardware configurations
 	        	 }			
 	        };
 			
-			//create child directory of worker, assign id to that worker
-			Workerpath = zkc.getZooKeeper().create("/worker/worker-", null, ZkConnector.acl, CreateMode.EPHEMERAL_SEQUENTIAL);
-			String[] temp = Workerpath.split("-");
-			Workerid = temp[1];			//create workerid of this worker
-			zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
 			
         } catch(Exception e) {
             System.out.println("Zookeeper connect "+ e.getMessage());
@@ -159,8 +156,78 @@ public class Worker{	//worker node, need to know hardware configurations
 		
        
 	}
-	
-	public String addToFreeWorker(WorkerObject wk){
+
+
+	public void Building(){
+		//create child directory of worker, assign id to that worker
+			try{
+				Workerpath = zkc.getZooKeeper().create(WORKER_PATH+"/"+"worker-", null, ZkConnector.acl, CreateMode.EPHEMERAL_SEQUENTIAL);
+				String[] temp = Workerpath.split("-");
+				Workerid = temp[1];			//create workerid of this worker
+				String wkinfo=Workerid+":"+this.executionTime;
+				zkc.setData(											//set data for worker
+		                    WORKER_PATH+"/"+"worker-"+Workerid,       // Path
+		                    wkinfo,  // information
+							-1
+		                    );
+				Create_WorkerObj(Workerid);
+				String info = wk.toNodeDataString();
+				//System.out.println(info);
+				zkc.create(										//create free worker object
+			                FREE_WORKERS_PATH+"/"+"worker-"+Workerid,       // Path
+			                info,   // information
+			                CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
+			     );
+				zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
+				}catch(Exception e) {
+            			System.out.println("Building Worker: "+ e.getMessage());
+        		}
+		}
+
+
+
+	  private static synchronized void createOnePersistentFolder(String Path, String value){	
+		// create folder
+ 		Stat stat = zkc.exists(Path,null);
+        if (stat == null) { 
+	        System.out.println("Creating " + Path);
+	        Code ret = zkc.create(
+	                    Path,         // Path of znode
+	                    value,        // Data
+	                    CreateMode.PERSISTENT   // Znode type, set to PERSISTENT.
+	                    );
+	        if (ret == Code.OK) {
+				System.out.println(Path.toString()+" path created!");
+	   	 	} else {
+				System.out.println(Path.toString()+" path creation failed!");
+			}
+        }
+    }
+
+	/**
+	 * Create persistent folders.
+ 	 */
+    private void createPersistentFolders(){
+		// create jobs folder
+		createOnePersistentFolder(JOBS_PATH, null);
+
+		// create seq folder
+		createOnePersistentFolder(SEQ_PATH, "1");
+
+		// create worker folder
+		createOnePersistentFolder(WORKER_PATH, null);
+		
+		createOnePersistentFolder(FREE_WORKERS_PATH, null);
+		// create result folder
+		createOnePersistentFolder(RESULT_PATH, null);
+
+		// create jobpool folder
+		createOnePersistentFolder(JOBPOOL_PATH, null);
+    }
+
+
+
+	public void Update_WorkerObj(){
 		try{
 			Process p = Runtime.getRuntime().exec("getconf _NPROCESSORS_ONLN");
     			p.waitFor();		//create shell object and retrieve cpucore number
@@ -168,28 +235,22 @@ public class Worker{	//worker node, need to know hardware configurations
 			wk.cpucore = br.readLine();
 			wk.executionTime= this.executionTime;
 			
-			
-			return wk.toNodeDataString();
 		
 		}catch (Exception e) {
             e.printStackTrace();
-            return null;
         }
-		
-		
 	}
 	
 	
-	private String Create_WorkerObj(String wkid){
+	private void Create_WorkerObj(String wkid){
 			String wkname= "worker-"+wkid;
-			WorkerObject wkObject= new WorkerObject(wkname);
-			return addToFreeWorker(wkObject);
-		
+			wk= new WorkerObject(wkname);
+			Update_WorkerObj();
 	}
 	
 	
 	
-	private long benchmark(){
+	private long benchmark(){		//mock of benchmark
 		long startTime = System.nanoTime();
 		try{ Thread.sleep(1000); } catch (Exception e) {}
 		long elapsedTime = System.nanoTime() - startTime;
