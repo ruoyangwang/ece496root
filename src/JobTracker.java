@@ -268,14 +268,13 @@ public class JobTracker {
 		while(l.hasNext()){
 			String r = (String)l.next();
 			Stat stat = null;
-			String rPath = JOBS_PATH + r;
+			String rPath = JOBS_PATH + "/" + r;
 			stat = zkc.exists(rPath, null); // see if node in workerList exists in jobList
 
 			if(stat == null){
-				String wPath = JOBS_PATH + r;
-
+				
 				//create worker
-				createOnePersistentFolder(wPath, null);
+				createOnePersistentFolder(rPath, null);
 
 			}
 		}

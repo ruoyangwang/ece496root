@@ -164,21 +164,26 @@ public class Worker{	//worker node, need to know hardware configurations
 				Workerpath = zkc.getZooKeeper().create(WORKER_PATH+"/"+"worker-", null, ZkConnector.acl, CreateMode.EPHEMERAL_SEQUENTIAL);
 				String[] temp = Workerpath.split("-");
 				Workerid = temp[1];			//create workerid of this worker
-				String wkinfo=Workerid+":"+this.executionTime;
-				zkc.setData(											//set data for worker
-		                    WORKER_PATH+"/"+"worker-"+Workerid,       // Path
-		                    wkinfo,  // information
-							-1
-		                    );
+				
 				Create_WorkerObj(Workerid);
 				String info = wk.toNodeDataString();
 				//System.out.println(info);
-				zkc.create(										//create free worker object
-			                FREE_WORKERS_PATH+"/"+"worker-"+Workerid,       // Path
+				for(int i=0;i<wk.Node_power();i++){
+					zkc.create(										//create free worker object
+			                FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+i,       // Path
 			                info,   // information
 			                CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
-			     );
+			     	);
+
+				}
+				
+				zkc.setData(											//set data for worker
+		                    WORKER_PATH+"/"+"worker-"+Workerid,       // Path
+		                    info,  // information
+							-1
+		                    );
 				zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
+
 				}catch(Exception e) {
             			System.out.println("Building Worker: "+ e.getMessage());
         		}
