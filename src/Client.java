@@ -21,7 +21,6 @@ public class Client {
     static ObjectOutputStream Sout = null;
 
 	private static void getConn(){
-		System.out.println("In getConn");
 		String resultData;
 		Stat stat = null;
 		String rPath = "/jobTracker";
@@ -36,7 +35,7 @@ public class Client {
 			return;
 		}
 
-		System.out.println("Got from zookeeper -"+resultData);
+		//System.out.println("Got from zookeeper -"+resultData);
 		String[] temp = resultData.split(":");
 
 		try{
@@ -45,11 +44,11 @@ public class Client {
 			Sout = null;
 			Sin = null;
 
-			System.out.println("getConn Successful host:"+temp[0]+" port:"+temp[1]);
+			//System.out.println("getConn Successful host:"+temp[0]+" port:"+temp[1]);
 
 		}catch(Exception e)
 		{
-			System.out.println("Exception at getConn: "+resultData);
+			//System.out.println("Exception at getConn: "+resultData);
 		}
 
 
@@ -75,11 +74,13 @@ public class Client {
 		Scanner in = new Scanner(System.in);
 		String q = "q";
 		String run = "run";
+		String status = "status";
 
 		while(true){
 			System.out.println("Enter:");
 			System.out.println("\"run\" followed by an input file and Q values to start a new job");
 			System.out.println("ex: \"run inputfile.txt 1-3,5\" would run npairs with inputfile,txt with Q values 1,2,3,5");
+			System.out.println("\"status\" follow by tracking ID to get status for the job");
 			System.out.println("\"q\" to quit");
 
 			String s = in.nextLine();
@@ -115,6 +116,20 @@ public class Client {
 	
 				Request = "run:" + inputFile + ":" + qValues;
 
+			}else if (status.equalsIgnoreCase(type)) {
+				String jobId = null;
+					
+				if (commandComponents.size() >= 2) {
+					jobId = commandComponents.get(1);
+				}
+
+				if (jobId == null) {
+					System.out.println("Enter Job ID");
+					jobId = in.nextLine().trim();
+				}
+	
+				Request = "status:" + jobId;
+
 			}else if(q.equalsIgnoreCase(type)){
 
 				System.out.println("Quitting");
@@ -142,7 +157,7 @@ public class Client {
 
 				try {
 					if(Sout==null){
-						System.out.println("new Sout created");
+						//System.out.println("new Sout created");
 						Sout = new ObjectOutputStream(socket.getOutputStream());
 					}
 
@@ -150,7 +165,7 @@ public class Client {
  				
 
 					if(Sin == null)
-						System.out.println("new Sin created");
+						//System.out.println("new Sin created");
  						Sin = new ObjectInputStream(socket.getInputStream());
 
  					Reply = (String) Sin.readObject();

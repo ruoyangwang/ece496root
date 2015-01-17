@@ -53,8 +53,8 @@ public class HandleClient extends Thread{
 			return jobID.toString();
 	}
 
-	private int checkResult(String nValue) {
-		return JobTracker.checkResult(nValue);
+	private int checkResult(String jobId) {
+		return JobTracker.checkResult(jobId);
 	}
 
 	public void run() {
@@ -101,11 +101,11 @@ public class HandleClient extends Thread{
 				int result = checkResult(jobId);
 				packetToClient =  "Job ID - " + jobId + ":";
 				if (result == 1) {
-					packetToClient =  packetToClient + "Finished.";
+					packetToClient =  packetToClient + " Finished.";
 				} else if (result == 0) {
-					packetToClient =  packetToClient + "Not Finished.";
+					packetToClient =  packetToClient + " Not Finished.";
 				} else {
-					packetToClient =  packetToClient + "Error occured. Please see log";
+					packetToClient =  packetToClient + " Error occured. Please see log";
 				}
 				
 			} else {
