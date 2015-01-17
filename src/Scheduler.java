@@ -387,9 +387,29 @@ public class Scheduler {
 				updateJobsList();
 				doSchedule();
 			
-				List<String> freeWorkerNames = zkc.getChildren(FREE_WORKERS_PATH);
+				List<String> freeWorkerNodes = zkc.getChildren(FREE_WORKERS_PATH);
+				List<String> freeWorkerNames = new ArrayList<String>();
 				if (freeWorkerNames != null && freeWorkerNames.size() > 0) {
-					assignJobs(freeWorkerNames);
+					
+					ListIterator freeWorkerNodesIterator = freeWorkerNodes.listIterator();
+					while(freeWorkerNodesIterator.hasNext()) {
+						String freeNodeName = (String)freeWorkerNodesIterator.next();
+						Stat workerStat = null;
+						String rPath = FREE_WORKERS_PATH + "/" + freeNodeName;
+						workerStat = zkc.exists(rPath, null);
+						if(workerStat != null){
+							String workerData = zkc.getData(rPath, null, workerStat);
+							WorkerObject wo = new WorkerObject();
+							wo.parseNodeString(workerData);
+
+							freeWorkerNames.add(wo.getNodeName());
+						}
+							
+					}
+					
+					if(freeWorkerNames.size() > 0){
+						assignJobs(freeWorkerNames);					
+					}
 				}
 
 				// Set watches

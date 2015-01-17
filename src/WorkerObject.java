@@ -13,6 +13,9 @@ public class WorkerObject {
 	public String memFree;
 	public final String DELIMITER = ":";
 
+	public WorkerObject() {
+	}
+
 	public WorkerObject(String workerName) {
 		// worker name including the id
 		this.workerName = workerName;
