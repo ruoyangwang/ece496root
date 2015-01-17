@@ -1,7 +1,6 @@
 import java.util.*;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.InputStreamReader;
+import java.net.*;
+import java.io.*;
 public class WorkerObject {
 
 	// name of the worker. ie: dir name for this worker
@@ -26,12 +25,22 @@ public class WorkerObject {
 
 	public int Node_power(){
 		try{
-			/*Process p = Runtime.getRuntime().exec("cat /proc/meminfo |grep MemFree");
+			Process p = Runtime.getRuntime().exec("cat /proc/meminfo |grep MemFree");
     			p.waitFor();		//create shell object and retrieve cpucore number
 			BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
-			String[] tokens = br.readLine().split(" ");
-			//this.memFree=tokens[1];*/
-			return 4;//Integer.parseInt(this.memFree);
+			
+			while (br.readLine() != null){					//looking for FreeMem row 
+				String[] tokens = br.readLine().split("\\s+");
+				System.out.println(tokens[0]);
+				if(tokens[0].equals("MemFree:")){
+					this.memFree=tokens[1];
+					break;
+				}
+			}
+			
+			BufferedReader fbr = new BufferedReader(new FileReader(new File("../system_config/memory_config.txt")));
+			int minimum_require = Integer.parseInt(fbr.readLine());
+			return Integer.parseInt(this.memFree)/minimum_require;
 		
 		}catch (Exception e) {
             e.printStackTrace();
