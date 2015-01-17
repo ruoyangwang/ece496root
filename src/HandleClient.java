@@ -42,7 +42,7 @@ public class HandleClient extends Thread{
 			}
 			
 			// create dir under jobpool
-			JobTracker.addJobIdToPool(jobID.toString());
+			JobTracker.addJobIdToPool(jobID.toString(), nValueList.size());
 
 			for (Integer q: nValueList) {
 				
@@ -51,6 +51,10 @@ public class HandleClient extends Thread{
 			}
 
 			return jobID.toString();
+	}
+
+	private int checkResult(String nValue) {
+		return JobTracker.checkResult(nValue);
 	}
 
 	public void run() {
@@ -94,18 +98,16 @@ public class HandleClient extends Thread{
 				System.out.println("A New Request: " + packetFromClient);
 				
 				String jobId = temp[1];
-				
-			/*
-				boolean finished = jobStatus(jobId);
-				
-
-				if (finished) {
-
+				int result = checkResult(jobId);
+				packetToClient =  "Job ID - " + jobId + ":";
+				if (result == 1) {
+					packetToClient =  packetToClient + "Finished.";
+				} else if (result == 0) {
+					packetToClient =  packetToClient + "Not Finished.";
 				} else {
-					packetToClient="Job ID status: Unfinished";
+					packetToClient =  packetToClient + "Error occured. Please see log";
 				}
-			*/		
-				packetToClient = "Feature to come";
+				
 			} else {
 				System.out.println("Unknown Request");
 

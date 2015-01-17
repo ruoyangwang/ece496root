@@ -166,7 +166,7 @@ public class JobTracker {
 	/**
 	 * Adds a job to the job pool
 	 */
-	public static synchronized void addJobIdToPool(String jobId) {
+	public static synchronized void addJobIdToPool(String jobId, Integer count) {
 		Stat stat = zkc.exists(JOBPOOL_PATH, null);
 
 		if (stat != null) {
@@ -179,6 +179,51 @@ public class JobTracker {
 		} else {
 			System.out.println(JOBPOOL_PATH + " does not exist in assignWork - 1");
 		}
+
+		stat = zkc.exists(RESULT_PATH, null);
+		if (stat != null) {
+			String addP = RESULT_PATH + "/" + jobId;
+		    System.out.println("Adding job id to result path: " + addP);
+
+			createOnePersistentFolder(addP, count.toString());
+
+		} else {
+			System.out.println(RESULT_PATH + " does not exist in assignWork - 1");
+		}
+	}
+
+	
+	public static int checkResult(String jobId) {
+		String p = RESULT_PATH + "/" + jobId;
+		Stat stat = zkc.exists(p, null);
+		if (stat != null) {
+			int totalJobs = -1;
+			String data = zkc.getData(p, null, stat);
+			if (data != null) {
+				totalJobs = Integer.parseInt(data);
+				
+				if (totalJobs < 0) {
+					System.out.println("ERROR: path: " + p + " has invalid data");
+				} else {
+					int finished = zkc.getChildren(p).size();
+					
+					if (finished == totalJobs) {
+						return 1;
+					} else {
+						return 0;
+					}
+
+				}
+
+
+			} else {
+				System.out.println("ERROR: path: " + p + " has no data");
+			}
+		} else {
+			System.out.println("ERROR: path: " + p + " does not exist");
+		}
+		return -1;
+
 	}
 
 
