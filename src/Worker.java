@@ -101,32 +101,34 @@ public class Worker{	//worker node, need to know hardware configurations
 	        	 @Override
 	             public void process(WatchedEvent event) {
 	                 String path = event.getPath();
-	                 String Workerpath= JOBS_PATH+"/"+Workerid;
+	                 String WorkerJobPath= JOBS_PATH+"/"+Workerid;
 	                 switch (event.getType()){
 	                 	case NodeChildrenChanged:
 	                 		try {
 	                            //if (path.equals(Workerpath)){
+	                            	Stat stat = zkc.exists(WorkerJobPath, null);
+	                            	String taskinfo = zkc.getData(WorkerJobPath, null, stat);
+	                            	JobObject jo = new JobObject();
+	                            	jo.parseJobString(taskinfo);
+	                            	int Qvalue= jo.nValue;
+	                            	String inputLocation= jo.inputFile;
 			                 		long startTime = System.nanoTime();
 			                 			
-	                            	 	try{ 
+	                            	try{ 
 										//mock of execution, depends on where we put zookeeper and NPAIRS executables we can change shell command 
-										System.out.println("execiting......");
-										String command = "sleep 10";				
+										System.out.println("executing......");
+
+										String command = "sh ../execute/execute.sh " + inputLocation+" "+ Qvalue;				
 										Process p = Runtime.getRuntime().exec(command);
-										p.waitFor();		//create shell object and retrieve cpucore number
-										BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
-
-
+										if(p.waitFor()==0)		
+											zkc.delete(WorkerJobPath,-1);
 									
-										//Thread.sleep(1000); 
 									} catch (Exception e) {
 										e.printStackTrace();
 									}	//TODO:assume this is running the child node for now
 	                            	 	
-	                            	 	long endTime = System.nanoTime();	                            		
+	                            	long endTime = System.nanoTime();	                            		
 			                 		executionTime = (endTime - startTime);
-	                            	 	//now need to delete the directory
-	                            		zkc.delete(Workerpath,-1);
 	                            		
 	                            		//TODO:assume now updating result to RESULT_PATH directory
 	                            		
@@ -136,8 +138,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	                                            FREE_WORKERS_PATH+":"+Workerid,       // Path
 	                                            info,   // information
 	                                            -1
-	                                            );//zkc.getZooKeeper().create("/freeWorkers/"+Workerid, info, ZkConnector.acl, CreateMode.EPHEMERAL_SEQUENTIAL);
-	                           // }
+	                                            );
 	                            		
 	                        } catch (Exception e) {
 	                            e.printStackTrace();
@@ -235,7 +236,7 @@ public class Worker{	//worker node, need to know hardware configurations
 
 	public void Update_WorkerObj(){
 		try{
-			Process p = Runtime.getRuntime().exec("getconf _NPROCESSORS_ONLN");
+			Process p = Runtime.getRuntime().exec("sh cpu_core.sh");
     			p.waitFor();		//create shell object and retrieve cpucore number
 			BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
 			wk.cpucore = br.readLine();
