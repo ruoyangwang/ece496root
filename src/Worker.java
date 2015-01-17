@@ -101,7 +101,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	        	 @Override
 	             public void process(WatchedEvent event) {
 	                 String path = event.getPath();
-	                 String WorkerJobPath= JOBS_PATH+"/"+Workerid;
+	                 String WorkerJobPath= JOBS_PATH+"/worker-"+Workerid;
 	                 switch (event.getType()){
 	                 	case NodeChildrenChanged:
 	                 		try {

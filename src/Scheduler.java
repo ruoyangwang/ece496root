@@ -35,7 +35,8 @@ public class Scheduler {
 	private ArrayList<WorkerObject> workersList;
 	private ArrayList<JobObject> jobsList;
 	private Hashtable<String, Queue<JobObject>> jobQueue;
-	private Hashtable<String, String> jobIdWatchTable;
+
+	private ArrayList<String> knownJobIds;
 
     // watcher for primary/backup of job tracker
 	Watcher schedulerWatcher;
@@ -46,7 +47,6 @@ public class Scheduler {
 	// watcher on free worker directory
 	Watcher freeWorkerWatcher;
 
-	Watcher jobpoolIdWatcher;
 	static String schedulerServerInfo;
 
     final static String SCHEDULER_PATH = "/scheduler";
@@ -72,8 +72,8 @@ public class Scheduler {
 		jobQueue = null;
 		workersList = new ArrayList<WorkerObject>();
 		jobsList = new ArrayList<JobObject>();
-		jobIdWatchTable = new Hashtable<String,String>();
-
+		knownJobIds = new ArrayList<String>();
+		
 		// initialize watchers
         schedulerWatcher = new Watcher() { // Anonymous Watcher
                             @Override
@@ -98,9 +98,20 @@ public class Scheduler {
                             @Override
                             public void process(WatchedEvent event) {
 								EventType type = event.getType();
-								// Only need to handler node create because the client can not cancel jobs
-								// This will reduce noise as job are being removed as they are worked on by the workers
-								if (type == EventType.NodeChildrenChanged || type == EventType.NodeDataChanged) {
+								boolean operationNeeded = false;
+
+								/*if (type == EventType.NodeChildrenChanged) {
+									List<String> childList = zkc.getChildren(JOBPOOL_PATH, null);
+									if (!knownJobIds.containAll(childList)) {
+										operationNeeded = true;
+										knownJobIds = childList;
+									}
+								}*/
+								operationNeeded = true;
+
+
+								if ((type == EventType.NodeChildrenChanged && operationNeeded) 
+									|| type == EventType.NodeDataChanged) {
 									System.out.println("job added in jobpool. Now handle it.");       
 									updateJobsList();
 									doSchedule();
@@ -115,26 +126,6 @@ public class Scheduler {
 								}                 
 								//System.out.println("jobpoolWatcher set, eventType: " + event.getType().toString());
                             } };
-
-		jobpoolIdWatcher = new Watcher() {
-							@Override
-                            public void process(WatchedEvent event) {
-System.out.println("jobpool id changed");
-								//jobIdWatchTable.remove(event.getPath());
-								EventType type = event.getType();
-								// Only need to handler node create because the client can not cancel jobs
-								// This will reduce noise as job are being removed as they are worked on by the workers
-								if (type == EventType.NodeChildrenChanged) {
-									System.out.println("job added in jobpool. Now handle it.");       
-									updateJobsList();
-									doSchedule();
-									attemptToAssignJobs();
-								}        
-								// re enable watch       
-						        addJobpoolIdWatchIfNotExist(event.getPath());
-								//List<String> stat = zkc.getChildren(event.getPath(), jobpoolWatcher);
-								
-                            }};
 
 		workerWatcher = new Watcher() { // Anonymous Watcher
                             @Override
@@ -179,7 +170,7 @@ System.out.println("jobpool id changed");
 	}
 
 	private void attemptToAssignJobs() {
-System.out.println("Attempting to assign jobs..."); 
+		System.out.println("Attempting to assign jobs..."); 
 		List<String> workerNames = zkc.getChildren(FREE_WORKERS_PATH);
 		if (workerNames != null && workerNames.size() > 0) {
 			assignJobs(workerNames);
@@ -292,16 +283,6 @@ System.out.println("Attempting to assign jobs...");
 		}
 	}
 
-
-	private List<String> addJobpoolIdWatchIfNotExist(String path) {
-		/*String p = jobIdWatchTable.get(path);
-		if (p == null) {
-			return zkc.getChildren(path, jobpoolIdWatcher);
-		} else {*/
-			return zkc.getChildren(path);
-		//}
-	}
-
 	// Update the jobs list.
 	private void updateJobsList() {
 		System.out.println("Updating jobs list");   
@@ -337,7 +318,7 @@ System.out.println("Attempting to assign jobs...");
 
 				if(jobIdStat != null){
 
-					ZJobList = addJobpoolIdWatchIfNotExist(idPath);
+					ZJobList = zkc.getChildren(idPath);
 
 					if (ZJobList.size() == 0) {
 						System.out.println("jobid " + idPath + " has no job ids");
