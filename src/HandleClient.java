@@ -90,6 +90,22 @@ public class HandleClient extends Thread{
 
 				String jobId = newRequest(inputFileName, nValues);
  				packetToClient="Tracking ID: " + jobId;
+			} else if(temp[0].equalsIgnoreCase(new String("status"))) {
+				System.out.println("A New Request: " + packetFromClient);
+				
+				String jobId = temp[1];
+				
+			/*
+				boolean finished = jobStatus(jobId);
+				
+
+				if (finished) {
+
+				} else {
+					packetToClient="Job ID status: Unfinished";
+				}
+			*/		
+				packetToClient = "Feature to come";
 			} else {
 				System.out.println("Unknown Request");
 

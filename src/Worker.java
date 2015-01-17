@@ -104,14 +104,17 @@ public class Worker{	//worker node, need to know hardware configurations
 	        	 @Override
 	             public void process(WatchedEvent event) {
 	                 String path = event.getPath();
+
 	                 String WorkerJobPath= JOBS_PATH+"/woker-"+Workerid;
 	                 String currentJob="dummy";
 	                 String taskinfo=null;
+
 	                 switch (event.getType()){
 	                 	case NodeChildrenChanged:
 	                 		try {
 	                            //if (path.equals(Workerpath)){
 	                            	Stat stat = zkc.exists(WorkerJobPath, null);
+
 	                            	 List<String> children=zkc.getChildren(WorkerJobPath, WorkerWatcher);
 	                            	for(String child: children){
 	                            		if(checkMap.get(child)==null){
