@@ -192,6 +192,18 @@ public class JobTracker {
 		}
 	}
 
+	private static void removeJobpoolJobID(String jobId) {
+		String p = JOBPOOL_PATH + "/" + jobId;
+		Stat stat = zkc.exists(p, null);
+		if (stat != null) {
+			int jobsPending = zkc.getChildren(p).size();
+			if (jobsPending == 0) {
+				zkc.delete(p, -1);
+			} else {
+				System.out.println("ERROR: Attempting to delete jobpool ID with job pending");
+			}
+		}
+	}
 	
 	public static int checkResult(String jobId) {
 		String p = RESULT_PATH + "/" + jobId;
@@ -208,14 +220,12 @@ public class JobTracker {
 					int finished = zkc.getChildren(p).size();
 					
 					if (finished == totalJobs) {
+						removeJobpoolJobID(jobId);
 						return 1;
 					} else {
 						return 0;
 					}
-
 				}
-
-
 			} else {
 				System.out.println("ERROR: path: " + p + " has no data");
 			}
