@@ -34,7 +34,6 @@ public class WorkerObject {
 			
 			while (br.readLine() != null){					//looking for FreeMem row 
 				String[] tokens = br.readLine().split("\\s+");
-				System.out.println(tokens[0]);
 				if(tokens[0].equals("MemFree:")){
 					this.memFree=tokens[1];
 					break;
@@ -43,7 +42,7 @@ public class WorkerObject {
 			
 			BufferedReader fbr = new BufferedReader(new FileReader(new File("../system_config/memory_config.txt")));
 			int minimum_require = Integer.parseInt(fbr.readLine());
-			return Integer.parseInt(this.memFree)/minimum_require;
+			return Math.min(Integer.parseInt(this.memFree)/minimum_require,Integer.parseInt(cpucore));
 		
 		}catch (Exception e) {
             e.printStackTrace();

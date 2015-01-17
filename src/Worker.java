@@ -8,6 +8,8 @@
  * 6.Add to result in 'results' (i.e. output result, running time, hardware info, etc)
  * 7.Put this Worker Object to freeWorker
  */
+import java.util.HashMap;
+import java.util.Map;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -35,6 +37,7 @@ import org.apache.zookeeper.data.Stat;
 public class Worker{	//worker node, need to know hardware configurations
 	static ZkConnector zkc;
 	static WorkerObject wk;
+	static HashMap<String, String> checkMap = new HashMap<String,String>();
     final static String JOB_TRACKER_PATH = "/jobTracker";
 	final static String WORKER_PATH = "/worker";
 	final static String JOBS_PATH = "/jobs";
@@ -101,42 +104,57 @@ public class Worker{	//worker node, need to know hardware configurations
 	        	 @Override
 	             public void process(WatchedEvent event) {
 	                 String path = event.getPath();
-	                 String WorkerJobPath= JOBS_PATH+"/"+Workerid;
+	                 String WorkerJobPath= JOBS_PATH+"/woker-"+Workerid;
+	                 String currentJob="dummy";
+	                 String taskinfo=null;
 	                 switch (event.getType()){
 	                 	case NodeChildrenChanged:
 	                 		try {
 	                            //if (path.equals(Workerpath)){
 	                            	Stat stat = zkc.exists(WorkerJobPath, null);
-	                            	String taskinfo = zkc.getData(WorkerJobPath, null, stat);
-	                            	JobObject jo = new JobObject();
-	                            	jo.parseJobString(taskinfo);
-	                            	int Qvalue= jo.nValue;
-	                            	String inputLocation= jo.inputFile;
-			                 		long startTime = System.nanoTime();
-			                 			
-	                            	try{ 
-										//mock of execution, depends on where we put zookeeper and NPAIRS executables we can change shell command 
-										String command = "sh ../execute/execute.sh " + inputLocation+" "+ Qvalue;				
-										Process p = Runtime.getRuntime().exec(command);
-										if(p.waitFor()==0)		
-											zkc.delete(WorkerJobPath,-1);
+	                            	 List<String> children=zkc.getChildren(WorkerJobPath, WorkerWatcher);
+	                            	for(String child: children){
+	                            		if(checkMap.get(child)==null){
+	                            			currentJob = child;
+	                            			checkMap.put(child,"occupied");
+			                        		taskinfo = zkc.getData(WorkerJobPath+"/"+child, null, stat);
+			                        		break;
+	                            		}
+	                            	}
+	                            	
+	                            	
+	                            	if(taskinfo!=null){
+					                    	JobObject jo = new JobObject();
+					                    	jo.parseJobString(taskinfo);
+					                    	int Qvalue= jo.nValue;
+					                    	String inputLocation= jo.inputFile;
+							         		long startTime = System.nanoTime();
+							         			
+					                    	try{ 
+												//mock of execution, depends on where we put zookeeper and NPAIRS executables we can change shell command 
+												String command = "sh ../execute/execute.sh " + inputLocation+" "+ Qvalue;				
+												Process p = Runtime.getRuntime().exec(command);
+												if(p.waitFor()==0)		
+													zkc.delete(WorkerJobPath,-1);
+										
 									
-									} catch (Exception e) {
-										e.printStackTrace();
-									}	//TODO:assume this is running the child node for now
-	                            	 	
-	                            	long endTime = System.nanoTime();	                            		
-			                 		executionTime = (endTime - startTime);
-	                            		
-	                            		//TODO:assume now updating result to RESULT_PATH directory
-	                            		
-									Update_WorkerObj();	//delimited string   wkid:cpucoreNumber:jobspeed
-									String info = wk.toNodeDataString();
-	                            		zkc.setData(
-	                                            FREE_WORKERS_PATH+":"+Workerid,       // Path
-	                                            info,   // information
-	                                            -1
-	                                            );
+											} catch (Exception e) {
+												e.printStackTrace();
+											}	//TODO:assume this is running the child node for now
+					                    	 	
+					                    	long endTime = System.nanoTime();	                            		
+							         		executionTime = (endTime - startTime);
+					                    	checkMap.remove(currentJob);
+					                    		//TODO:assume now updating result to RESULT_PATH directory
+					                    		
+											Update_WorkerObj();	//delimited string   wkid:cpucoreNumber:jobspeed
+											String info = wk.toNodeDataString();
+					                    		zkc.setData(
+					                                    FREE_WORKERS_PATH+":"+Workerid,       // Path
+					                                    info,   // information
+					                                    -1
+					                                    );
+	                               }
 	                            		
 	                        } catch (Exception e) {
 	                            e.printStackTrace();
