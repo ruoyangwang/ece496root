@@ -353,6 +353,9 @@ public class Scheduler {
 		// create worker folder
 		createOnePersistentFolder(WORKER_PATH, null);
 
+		// create worker folder
+		createOnePersistentFolder(FREE_WORKER_PATH, null);
+
 		// create jobpool folder
 		createOnePersistentFolder(JOBPOOL_PATH, null);
     }
