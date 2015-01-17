@@ -12,6 +12,9 @@ public class WorkerObject {
 	
 	public final String DELIMITER = ":";
 
+	public WorkerObject() {
+	}
+
 	public WorkerObject(String workerName) {
 		// worker name including the id
 		this.workerName = workerName;
