@@ -35,6 +35,7 @@ public class Scheduler {
 	private ArrayList<WorkerObject> workersList;
 	private ArrayList<JobObject> jobsList;
 	private Hashtable<String, Queue<JobObject>> jobQueue;
+	private Hashtable<String, String> jobIdWatchTable;
 
     // watcher for primary/backup of job tracker
 	Watcher schedulerWatcher;
@@ -45,6 +46,7 @@ public class Scheduler {
 	// watcher on free worker directory
 	Watcher freeWorkerWatcher;
 
+	Watcher jobpoolIdWatcher;
 	static String schedulerServerInfo;
 
     final static String SCHEDULER_PATH = "/scheduler";
@@ -70,6 +72,7 @@ public class Scheduler {
 		jobQueue = null;
 		workersList = new ArrayList<WorkerObject>();
 		jobsList = new ArrayList<JobObject>();
+		jobIdWatchTable = new Hashtable<String,String>();
 
 		// initialize watchers
         schedulerWatcher = new Watcher() { // Anonymous Watcher
@@ -97,15 +100,41 @@ public class Scheduler {
 								EventType type = event.getType();
 								// Only need to handler node create because the client can not cancel jobs
 								// This will reduce noise as job are being removed as they are worked on by the workers
+								if (type == EventType.NodeChildrenChanged || type == EventType.NodeDataChanged) {
+									System.out.println("job added in jobpool. Now handle it.");       
+									updateJobsList();
+									doSchedule();
+									attemptToAssignJobs();
+								}        
+								// re enable watch
+								if (type == EventType.NodeDataChanged) {
+									Stat dataStat = null;
+									String data = zkc.getData(JOBPOOL_PATH, jobpoolWatcher, dataStat);
+								} else {
+									List<String> stat = zkc.getChildren(JOBPOOL_PATH, jobpoolWatcher);
+								}                 
+								//System.out.println("jobpoolWatcher set, eventType: " + event.getType().toString());
+                            } };
+
+		jobpoolIdWatcher = new Watcher() {
+							@Override
+                            public void process(WatchedEvent event) {
+System.out.println("jobpool id changed");
+								//jobIdWatchTable.remove(event.getPath());
+								EventType type = event.getType();
+								// Only need to handler node create because the client can not cancel jobs
+								// This will reduce noise as job are being removed as they are worked on by the workers
 								if (type == EventType.NodeChildrenChanged) {
 									System.out.println("job added in jobpool. Now handle it.");       
 									updateJobsList();
 									doSchedule();
+									attemptToAssignJobs();
 								}        
-								// re enable watch                 
-								List<String> stat = zkc.getChildren(event.getPath(), jobpoolWatcher);
-								//System.out.println("jobpoolWatcher set, eventType: " + event.getType().toString());
-                            } };
+								// re enable watch       
+						        addJobpoolIdWatchIfNotExist(event.getPath());
+								//List<String> stat = zkc.getChildren(event.getPath(), jobpoolWatcher);
+								
+                            }};
 
 		workerWatcher = new Watcher() { // Anonymous Watcher
                             @Override
@@ -115,6 +144,8 @@ public class Scheduler {
 									System.out.println("Workers changed. Now handle it.");       
 									updateWorkersList();
 									doSchedule();
+
+									attemptToAssignJobs();
 								}          
 								// re enable watch               
 								List<String> stat = zkc.getChildren(event.getPath(), workerWatcher);
@@ -125,17 +156,13 @@ public class Scheduler {
                             @Override
                             public void process(WatchedEvent event) {
 								EventType type = event.getType();
-								if (type == EventType.NodeCreated) {
+								if (type == EventType.NodeChildrenChanged) {
 									System.out.println("Free worker changed. Now handle it.");       
 									
-									List<String> workerNames = zkc.getChildren(FREE_WORKERS_PATH);
-									if (workerNames != null && workerNames.size() > 0) {
-										assignJobs(workerNames);
-									}
-									
+									attemptToAssignJobs();
 								}   
 								// re enable watch
-								List<String> s = zkc.getChildren(event.getPath(), freeWorkerWatcher);
+								List<String> s = zkc.getChildren(FREE_WORKERS_PATH, freeWorkerWatcher);
 								//System.out.println("freeWorkerWatcher set");
                             } };
     }
@@ -151,18 +178,55 @@ public class Scheduler {
 		jobsList.removeAll(remove);
 	}
 
-	private void assignJobs (List<String> workerNames) {
+	private void attemptToAssignJobs() {
+System.out.println("Attempting to assign jobs..."); 
+		List<String> workerNames = zkc.getChildren(FREE_WORKERS_PATH);
+		if (workerNames != null && workerNames.size() > 0) {
+			assignJobs(workerNames);
+		}
+    }
+
+	private void assignJobs (List<String> freeWorkerNodes) {
+		//System.out.println("Trying to assign jobs..."); 
+		// worker node names are passed in, try to get the names 
+		// of each nodes, which are not necessary the same as the node names.
+		List<WorkerObject> freeWorkerNames = new ArrayList<WorkerObject>();
+		if (freeWorkerNodes != null && freeWorkerNodes.size() > 0) {
+		
+			ListIterator freeWorkerNodesIterator = freeWorkerNodes.listIterator();
+			while(freeWorkerNodesIterator.hasNext()) {
+				String freeNodeName = (String)freeWorkerNodesIterator.next();
+				Stat workerStat = null;
+				String rPath = FREE_WORKERS_PATH + "/" + freeNodeName;
+				workerStat = zkc.exists(rPath, null);
+				if(workerStat != null){
+					String workerData = zkc.getData(rPath, null, workerStat);
+					WorkerObject wo = new WorkerObject();
+					wo.parseNodeString(workerData);
+					wo.freeWorkerNodeName = freeNodeName;
+					freeWorkerNames.add(wo);
+				}
+			}
+		}
+
+
+		if(freeWorkerNames.size() <= 0){
+			System.out.println("No Jobs to assign"); 
+			return;
+		}
+
 		System.out.println("Assigning jobs");   
 		ListIterator l;
-		l = workerNames.listIterator();
+		l = freeWorkerNames.listIterator();
 		List<JobObject> removedJobs = new ArrayList<JobObject>();
 
 		while(l.hasNext()) {
-			String workerName = (String)l.next();
+			WorkerObject wo = (WorkerObject)l.next();
+			String workerName = wo.getNodeName();
 			JobObject j = getJob(workerName);
 			if (j != null) {
 				// try to add job to worker directory
-				String workerPath = WORKER_PATH + "/" + workerName;
+				String workerPath = JOBS_PATH + "/" + workerName;
 				Stat ws = zkc.exists(workerPath, null);
 				if (ws != null) {
 					// see if job exists in job pool
@@ -174,8 +238,11 @@ public class Scheduler {
 
 						// remove job from job pool
 						if (ret == Code.OK) {
+							String freeWorkerNodePath = FREE_WORKERS_PATH + "/" + wo.freeWorkerNodeName;
+							zkc.delete(freeWorkerNodePath, -1);
 							zkc.delete(jobPath, -1);
-							removeIfNoChildren(j.getJobpoolParentPath());
+							// let jobtracker do this
+							//removeIfNoChildren(j.getJobpoolParentPath());
 
 							// remove from jobsList
 							removedJobs.add(j);
@@ -186,6 +253,8 @@ public class Scheduler {
 				} else {
 					System.out.println("ERR: Failed to assign job. Worker dir: " + workerPath + " does not exist");  
 				}
+			} else {
+				System.out.println("No jobs for worker: " + workerName);  
 			}
 
 		}
@@ -224,6 +293,15 @@ public class Scheduler {
 	}
 
 
+	private List<String> addJobpoolIdWatchIfNotExist(String path) {
+		/*String p = jobIdWatchTable.get(path);
+		if (p == null) {
+			return zkc.getChildren(path, jobpoolIdWatcher);
+		} else {*/
+			return zkc.getChildren(path);
+		//}
+	}
+
 	// Update the jobs list.
 	private void updateJobsList() {
 		System.out.println("Updating jobs list");   
@@ -242,6 +320,11 @@ public class Scheduler {
 
 			ZJobIdList = zkc.getChildren(JOBPOOL_PATH);
 
+			if (ZJobIdList.size() == 0) {
+				System.out.println("jobpool has no job ids");
+				return;
+			}
+
 			ListIterator l;
 			l = ZJobIdList.listIterator();
 		
@@ -250,11 +333,16 @@ public class Scheduler {
 				String jobId = (String)l.next();
 				Stat jobIdStat = null;
 				String idPath = JOBPOOL_PATH + "/" + jobId;
-				jobIdStat = zkc.exists(idPath, null); // see if node in workerList exists in jobList
+				jobIdStat = zkc.exists(idPath, null);
 
 				if(jobIdStat != null){
-					ZJobList = zkc.getChildren(JOBPOOL_PATH);
 
+					ZJobList = addJobpoolIdWatchIfNotExist(idPath);
+
+					if (ZJobList.size() == 0) {
+						System.out.println("jobid " + idPath + " has no job ids");
+						continue;
+					}
 					ListIterator jl;
 					jl = ZJobList.listIterator();
 					while(jl.hasNext()){
@@ -262,20 +350,21 @@ public class Scheduler {
 						Stat jobStat = null;
 						String rPath = idPath + "/" + jobIdName;
 
-						jobStat = zkc.exists(rPath, null); // see if node in workerList exists in jobList
+						jobStat = zkc.exists(rPath, null); 
 
 						if (jobStat != null) {
 							String jobData = zkc.getData(rPath, null, jobStat);
 
 							JobObject jo = new JobObject();
 							jo.parseJobString(jobData);
-
+							System.out.println("Adding new job to joblist; data: " + jobData);
 							this.jobsList.add(jo);
 						}
 					}
 				}
 			}
-		}
+		} else { System.out.println("jobpool does not exist"); }
+		System.out.println("Joblist now has " + this.jobsList.size() + " jobs");     
 	}
 
 
@@ -317,6 +406,8 @@ public class Scheduler {
 				}
 			}
 		}
+
+		System.out.println("WorkersList now has " + this.workersList.size() + " workers");     
 	}
 
 
@@ -354,7 +445,7 @@ public class Scheduler {
 		createOnePersistentFolder(WORKER_PATH, null);
 
 		// create worker folder
-		createOnePersistentFolder(FREE_WORKER_PATH, null);
+		createOnePersistentFolder(FREE_WORKERS_PATH, null);
 
 		// create jobpool folder
 		createOnePersistentFolder(JOBPOOL_PATH, null);
@@ -388,34 +479,16 @@ public class Scheduler {
 				doSchedule();
 			
 				List<String> freeWorkerNodes = zkc.getChildren(FREE_WORKERS_PATH);
-				List<String> freeWorkerNames = new ArrayList<String>();
-				if (freeWorkerNames != null && freeWorkerNames.size() > 0) {
-					
-					ListIterator freeWorkerNodesIterator = freeWorkerNodes.listIterator();
-					while(freeWorkerNodesIterator.hasNext()) {
-						String freeNodeName = (String)freeWorkerNodesIterator.next();
-						Stat workerStat = null;
-						String rPath = FREE_WORKERS_PATH + "/" + freeNodeName;
-						workerStat = zkc.exists(rPath, null);
-						if(workerStat != null){
-							String workerData = zkc.getData(rPath, null, workerStat);
-							WorkerObject wo = new WorkerObject();
-							wo.parseNodeString(workerData);
-
-							freeWorkerNames.add(wo.getNodeName());
-						}
-							
-					}
-					
-					if(freeWorkerNames.size() > 0){
-						assignJobs(freeWorkerNames);					
-					}
+				if (freeWorkerNodes != null && freeWorkerNodes.size() > 0) {			
+					assignJobs(freeWorkerNodes);	
 				}
 
 				// Set watches
 				List<String> s = zkc.getChildren(WORKER_PATH, workerWatcher);
 				s = zkc.getChildren(FREE_WORKERS_PATH, freeWorkerWatcher);
-				s = zkc.getChildren(JOBPOOL_PATH, jobpoolWatcher); 
+				s = zkc.getChildren(JOBPOOL_PATH, jobpoolWatcher);
+				Stat dataStat = null;
+				String ss = zkc.getData(JOBPOOL_PATH, jobpoolWatcher, dataStat);  
 				System.out.println("Watches set");
 			}
         } 
@@ -452,12 +525,20 @@ public class Scheduler {
 
         s.tryToBeBoss();
 
+		if (boss == 0) {
+			System.out.println("Sleeping...");
+		}
         while (boss==0) {
-            try{System.out.println("Sleeping..."); Thread.sleep(1000); } catch (Exception e) {}
+            try{
+//				System.out.println("Sleeping..."); 
+				Thread.sleep(1000); 
+			} catch (Exception e) {}
         }
 
+
+		System.out.println("Watching...");
         while (boss==1) {
-			System.out.println("Watching...");
+			//System.out.println("Watching...");
 			try{
 				Thread.sleep(5000);        		
 			}catch (Exception e){}		   	

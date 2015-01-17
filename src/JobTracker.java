@@ -160,7 +160,7 @@ public class JobTracker {
 		createOnePersistentFolder(RESULT_PATH, null);
 
 		// create jobpool folder
-		createOnePersistentFolder(JOBPOOL_PATH, null);
+		createOnePersistentFolder(JOBPOOL_PATH, "1");
     }
 
 	/**
@@ -211,46 +211,50 @@ public class JobTracker {
 	/**
 	 * Reassign work for a worker under job dir
 	 */
-	private void reassignWork(String removedWorker){
+	private boolean reassignWork(String removedWorker){
 		// assigned job to the removed worker
 		List<String> assignedList = zkc.getChildren(JOBS_PATH + "/" + removedWorker);
 		
-		Iterator l;
-		l = assignedList.listIterator();
-		Hashtable<String,String> newWork = new Hashtable<String,String>();
-
-		while(l.hasNext()){
-			// job-task name
-			String jobTaskId = (String)l.next();
-			Stat stat = null;
-
-			String rPath = JOBS_PATH + "/" + removedWorker + "/" + jobTaskId;
-			stat = zkc.exists(rPath, null); // see if node in jobList still exists in workerList
-			if(stat == null){
-				//error
-				System.out.println("Critical Error!! in reassignWork. " + rPath + " does not exist");
-			}else{
-
-				// extract data
-
-				String data = zkc.getData(rPath, null, stat);
+		if (assignedList.size() > 0) {
+			Iterator l;
+			l = assignedList.listIterator();
+			Hashtable<String,String> newWork = new Hashtable<String,String>();
 		
-				if(data != null){
-					// task id is n value
-					JobObject j = new JobObject();
-					j.parseJobString(data);
+			while(l.hasNext()){
+				// job-task name
+				String jobTaskId = (String)l.next();
+				Stat stat = null;
 
-					System.out.println("Adding into jobpool, data:" + data);
-
-					addToJobPool(j);
-
+				String rPath = JOBS_PATH + "/" + removedWorker + "/" + jobTaskId;
+				stat = zkc.exists(rPath, null); // see if node in jobList still exists in workerList
+				if(stat == null){
+					//error
+					System.out.println("Critical Error!! in reassignWork. " + rPath + " does not exist");
 				}else{
-					System.out.println("Critical Error!! in reassignWork. can not get data");
+
+					// extract data
+
+					String data = zkc.getData(rPath, null, stat);
+		
+					if(data != null){
+						// task id is n value
+						JobObject j = new JobObject();
+						j.parseJobString(data);
+
+						System.out.println("Adding into jobpool, data:" + data);
+
+						addToJobPool(j);
+
+						System.out.println("Deleting job: " + rPath);
+						zkc.delete(rPath, -1);
+					}else{
+						System.out.println("Critical Error!! in reassignWork. can not get data");
+					}
 				}
-				System.out.println("Deleting job: " + rPath);
-				zkc.delete(rPath, -1);
 			}
+			return true;
 		}
+		return false;
 	}
 
 
@@ -279,10 +283,38 @@ public class JobTracker {
 			}
 		}
 	}
+	
+	private void signalWorkReassigned() {
+		// signal work reassigned by changing the jobpool data. 
+		// scheduler will pick up the change in data
+    	Stat stat = null;
+    	stat = zkc.exists(JOBPOOL_PATH, null);
+    	if(stat == null){
+			System.out.println("Critical Error!! in signalWorkReassigned. " + JOBPOOL_PATH + " does not exist");
+    		return;
+    	}
+
+		String num = zkc.getData(JOBPOOL_PATH, null, stat);
+		if(num != null){
+			Integer parsed = Integer.parseInt(num);
+
+			Integer newValue;
+			newValue = new Integer(parsed.intValue()+1);
+
+			Stat stats = zkc.setData(JOBPOOL_PATH, newValue.toString(), -1);
+			if(stats == null){
+				System.out.println("Critical Error!! in signalWorkReassigned. " + JOBPOOL_PATH + " can not set new value");
+			}
+		}else{
+			System.out.println("Critical Error!! in signalWorkReassigned. can not get num");
+		}
+
+
+	}
 
 	private void handleLeftWorkers() {
 		List<String> jobList = zkc.getChildren(JOBS_PATH);
-
+		boolean workReassigned = false;
 		ListIterator l;
 		l=jobList.listIterator();
 		while(l.hasNext()){
@@ -292,9 +324,16 @@ public class JobTracker {
 			stat = zkc.exists(rPath, null); // see if worker node still exists.
 			if(stat == null){
 				System.out.println("Worker left...");
-				reassignWork(r);
-				zkc.delete(rPath, -1);
-			}
+				workReassigned = workReassigned || reassignWork(r);
+				zkc.delete(JOBS_PATH + "/" + r, -1);
+			} 
+			//else {
+				//System.out.println("Path: "+ rPath + " has stat: " + stat.toString());
+			//}
+		}
+
+		if (workReassigned) {
+			signalWorkReassigned();
 		}
 	}
 

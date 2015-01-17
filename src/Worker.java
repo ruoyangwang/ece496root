@@ -110,6 +110,7 @@ public class Worker{	//worker node, need to know hardware configurations
 			                 			
 	                            	 	try{ 
 										//mock of execution, depends on where we put zookeeper and NPAIRS executables we can change shell command 
+										System.out.println("execiting......");
 										String command = "sleep 10";				
 										Process p = Runtime.getRuntime().exec(command);
 										p.waitFor();		//create shell object and retrieve cpucore number

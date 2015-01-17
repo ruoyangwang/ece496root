@@ -6,6 +6,7 @@ public class WorkerObject {
 
 	// name of the worker. ie: dir name for this worker
 	private String workerName;
+	public String freeWorkerNodeName;
 
 	// performance metrics -- not yet used
 	public long benchmarkTime;
