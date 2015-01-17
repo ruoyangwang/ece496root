@@ -105,7 +105,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	             public void process(WatchedEvent event) {
 	                 String path = event.getPath();
 
-	                 String WorkerJobPath= JOBS_PATH+"/woker-"+Workerid;
+	                 String WorkerJobPath= JOBS_PATH+"/worker-"+Workerid;
 	                 String currentJob="dummy";
 	                 String taskinfo=null;
 
@@ -115,7 +115,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	                            //if (path.equals(Workerpath)){
 	                            	Stat stat = zkc.exists(WorkerJobPath, null);
 
-	                            	 List<String> children=zkc.getChildren(WorkerJobPath, WorkerWatcher);
+	                            	 List<String> children=zkc.getChildren(WorkerJobPath);
 	                            	for(String child: children){
 	                            		if(checkMap.get(child)==null){
 	                            			currentJob = child;
@@ -135,10 +135,11 @@ public class Worker{	//worker node, need to know hardware configurations
 							         			
 					                    	try{ 
 												//mock of execution, depends on where we put zookeeper and NPAIRS executables we can change shell command 
-												String command = "sh ../execute/execute.sh " + inputLocation+" "+ Qvalue;				
+												System.out.println("executing jobs.....");
+												String command = "./../execute/execute.sh " + inputLocation+" "+ Qvalue;				
 												Process p = Runtime.getRuntime().exec(command);
 												if(p.waitFor()==0)		
-													zkc.delete(WorkerJobPath,-1);
+													zkc.delete(WorkerJobPath+"/"+currentJob,-1);
 										
 									
 											} catch (Exception e) {
@@ -259,6 +260,7 @@ public class Worker{	//worker node, need to know hardware configurations
     			p.waitFor();		//create shell object and retrieve cpucore number
 			BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
 			wk.cpucore = br.readLine();
+			System.out.println(wk.cpucore);
 			wk.executionTime= this.executionTime;
 			
 		
