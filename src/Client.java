@@ -77,11 +77,13 @@ public class Client {
 		String status = "status";
 
 		while(true){
+			System.out.println("");
 			System.out.println("Enter:");
 			System.out.println("\"run\" followed by an input file and Q values to start a new job");
 			System.out.println("ex: \"run inputfile.txt 1-3,5\" would run npairs with inputfile,txt with Q values 1,2,3,5");
 			System.out.println("\"status\" follow by tracking ID to get status for the job");
 			System.out.println("\"q\" to quit");
+			System.out.println("");
 
 			String s = in.nextLine();
 			String userCommand = s.trim();

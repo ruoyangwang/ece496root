@@ -65,6 +65,9 @@ public class JobTracker {
         jobTrackerWatcher = new Watcher() { // Anonymous Watcher
                             @Override
                             public void process(WatchedEvent event) {
+								System.out.println("");
+								System.out.println("--- In jobTrackerWatcher ---");
+
 								// Try to be 
 								EventType type = event.getType();
 								if (type == EventType.NodeDeleted) {
@@ -83,6 +86,8 @@ public class JobTracker {
         workerWatcher = new Watcher() { // Anonymous Watcher
                             @Override
                             public void process(WatchedEvent event) {
+								System.out.println("");
+								System.out.println("--- In workerWatcher ---");
 								EventType type = event.getType();
 								if (type == EventType.NodeChildrenChanged) {
 									System.out.println("Workers Changed. Now handle it.");       

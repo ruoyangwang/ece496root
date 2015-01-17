@@ -78,6 +78,8 @@ public class Scheduler {
         schedulerWatcher = new Watcher() { // Anonymous Watcher
                             @Override
                             public void process(WatchedEvent event) {
+								System.out.println("");
+								System.out.println("--- In scheudlerWatcher ---");
 								// Try to be 
 								EventType type = event.getType();
 								if (type == EventType.NodeDeleted) {
@@ -97,6 +99,8 @@ public class Scheduler {
         jobpoolWatcher = new Watcher() { // Anonymous Watcher
                             @Override
                             public void process(WatchedEvent event) {
+								System.out.println("");
+								System.out.println("--- In jobpoolWatcher ---");
 								EventType type = event.getType();
 								boolean operationNeeded = false;
 
@@ -130,6 +134,8 @@ public class Scheduler {
 		workerWatcher = new Watcher() { // Anonymous Watcher
                             @Override
                             public void process(WatchedEvent event) {
+								System.out.println("");
+								System.out.println("--- In workerWatcher ---");
 								EventType type = event.getType();
 								if (type == EventType.NodeChildrenChanged) {
 									System.out.println("Workers changed. Now handle it.");       
@@ -146,6 +152,8 @@ public class Scheduler {
 		freeWorkerWatcher = new Watcher() { // Anonymous Watcher
                             @Override
                             public void process(WatchedEvent event) {
+								System.out.println("");
+								System.out.println("--- In freeWorkerWatcher ---");
 								EventType type = event.getType();
 								if (type == EventType.NodeChildrenChanged) {
 									System.out.println("Free worker changed. Now handle it.");       
@@ -471,6 +479,7 @@ public class Scheduler {
 				Stat dataStat = null;
 				String ss = zkc.getData(JOBPOOL_PATH, jobpoolWatcher, dataStat);  
 				System.out.println("Watches set");
+				System.out.println("");
 			}
         } 
     }
@@ -518,6 +527,7 @@ public class Scheduler {
 
 
 		System.out.println("Watching...");
+		System.out.println("");
         while (boss==1) {
 			//System.out.println("Watching...");
 			try{
