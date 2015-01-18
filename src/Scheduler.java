@@ -118,6 +118,7 @@ public class Scheduler {
 									|| type == EventType.NodeDataChanged) {
 									System.out.println("job added in jobpool. Now handle it.");       
 									updateJobsList();
+									updateWorkersList();
 									doSchedule();
 									attemptToAssignJobs();
 								}        
@@ -140,6 +141,7 @@ public class Scheduler {
 								if (type == EventType.NodeChildrenChanged) {
 									System.out.println("Workers changed. Now handle it.");       
 									updateWorkersList();
+									updateJobsList();
 									doSchedule();
 
 									attemptToAssignJobs();

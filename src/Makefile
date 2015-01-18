@@ -6,7 +6,7 @@ client:
 	javac -Xlint:unchecked -classpath ../lib/zookeeper-3.4.6.jar:../lib/log4j-1.2.16.jar ZkConnector.java Client.java
 
 Worker:
-	javac -Xlint:unchecked -classpath ../lib/zookeeper-3.4.6.jar:../lib/log4j-1.2.16.jar ZkConnector.java Worker.java WorkerObject.java JobObject.java WorkerThreadHandler.java
+	javac -Xlint:unchecked -classpath ../lib/zookeeper-3.4.6.jar:../lib/log4j-1.2.16.jar ZkConnector.java Worker.java WorkerObject.java JobObject.java WorkerThreadHandler.java ResultObject.java
 scheduler:
 	javac -Xlint:unchecked -classpath ../lib/zookeeper-3.4.6.jar:../lib/log4j-1.2.16.jar ZkConnector.java JobObject.java WorkerObject.java Scheduler.java ScheduleAlgo.java
 clean:

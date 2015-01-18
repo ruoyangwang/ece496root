@@ -43,8 +43,9 @@ import org.apache.zookeeper.data.Stat;
 public class Worker{	//worker node, need to know hardware configurations
 	static ZkConnector zkc;
 	static WorkerObject wk;
+	static String hostname;
 	//static List<Thread> threadList= new List<Thread>();
-	static HashMap<String, String> checkMap = new HashMap<String,String>();
+	static HashMap<String, WorkerThreadHandler> checkMap = new HashMap<String,WorkerThreadHandler>();
 	static int index=0;
 	static int max_executions=0;
 	static int iterator=0;
@@ -71,13 +72,6 @@ public class Worker{	//worker node, need to know hardware configurations
             return;
         }
 		
-		/*try{
-			// create a server socket to listen on
-        	serverSocket = new ServerSocket(Integer.parseInt(args[1]));
-		}catch (Exception e){
-			System.out.println("Failed to create server socker");
-			return;
-		}	*/
 		List<String> jobs = null, tasks = null; 
 		String myHostName;
 		String WorkerServerInfo;
@@ -100,7 +94,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	 }
 	 
 	 
-	public static void Thread_complete(long execution, int retcode, String currentJob, int threadNum){
+	public static void Thread_complete(long execution, int retcode, String currentJob, int threadNum, int Q, String location,int jobID){
 			synchronized(zkc){
 				if(retcode==0){	
 						String WorkerJobPath = JOBS_PATH+"/worker-"+Workerid;	
@@ -112,14 +106,21 @@ public class Worker{	//worker node, need to know hardware configurations
 				//TODO:assume now updating result to RESULT_PATH directory
 				System.out.println("finish deleting, ready to move on");
 				//Update_WorkerObj();	//delimited string   wkid:cpucoreNumber:jobspeed
-				String info = wk.toNodeDataString();
+				String wkInfo = wk.toNodeDataString();
+				ResultObject RO = new ResultObject(hostname, location, execution, jobID, Q);
+				String resultInfo = RO.toNodeDataString();
 				index+=1;
-				iterator-=1;
 
 				zkc.create(										//create free worker object
 						FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+index,       // Path
-						info,   // information
+						wkInfo,   // information
 						CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
+				);
+				System.out.println(jobID+"        " +resultInfo);
+				zkc.create(
+						RESULT_PATH+"/"+jobID+"/"+RO.get_Result_Node_Name(),
+						resultInfo,
+						CreateMode.EPHEMERAL
 				);
 			}	
 	}
@@ -140,6 +141,8 @@ public class Worker{	//worker node, need to know hardware configurations
 			WorkerWatcher = new Watcher(){
 	        	 @Override
 	             public void process(WatchedEvent event) {
+					try{Thread.sleep(5000);}
+					catch(Exception e){}
 					 
 	                 String path = event.getPath();
 
@@ -156,14 +159,20 @@ public class Worker{	//worker node, need to know hardware configurations
 					                    //if (path.equals(Workerpath)){
 					                    	Stat stat = zkc.exists(WorkerJobPath, null);
 
-					                    	 List<String> children=zkc.getChildren(WorkerJobPath);
+					                    	List<String> children=zkc.getChildren(WorkerJobPath);
+										JobObject jo = new JobObject();
 					                    	for(String child: children){
 					                    		System.out.println(child);
 					                    		if(checkMap.get(child)==null){
-					                    			currentJob = child;
-					                    			checkMap.put(currentJob,"occupied");
-							                		taskinfo = zkc.getData(WorkerJobPath+"/"+child, null, stat);
-							                		break;
+												taskinfo = zkc.getData(WorkerJobPath+"/"+child, null, stat);
+					                    			currentJob = child;													
+							                		jo.parseJobString(taskinfo);
+							                		int Qvalue= jo.nValue;
+												int jobID =jo.jobId;
+							                		String inputLocation= jo.inputFile;
+							                		WorkerThreadHandler t = new WorkerThreadHandler();
+							                		t.setVal(inputLocation, Qvalue, currentJob, jobID);
+					                    			checkMap.put(currentJob,t);
 					                    		}
 					                    	}
 					                    	
@@ -171,13 +180,7 @@ public class Worker{	//worker node, need to know hardware configurations
 			                        	
 			                        	if(taskinfo!=null){
 			                        			System.out.println("taskinfo is not null, can execute now");
-							                	JobObject jo = new JobObject();
-							                	jo.parseJobString(taskinfo);
-							                	int Qvalue= jo.nValue;
-							                	String inputLocation= jo.inputFile;
-							                	WorkerThreadHandler t = new WorkerThreadHandler();
-											
-							                	t.setVal(inputLocation, Qvalue, currentJob);
+							                
 											//add Future to the list, we can get return value using Future
 											System.out.println("waiting or no");
 											/*while(iterator<8){
@@ -185,39 +188,12 @@ public class Worker{	//worker node, need to know hardware configurations
 												Thread.sleep(120); 
 												
 											}*/
-											executor.submit(t);
-									     		/*long startTime = System.nanoTime();
-									     			
-							                	try{ 
-													//mock of execution, depends on where we put zookeeper and NPAIRS executables we can change shell command 
-													System.out.println("executing jobs.....");
-													String command = "sh ../execute/execute.sh " + inputLocation+" "+ Qvalue;				
-													Process p = Runtime.getRuntime().exec(command);
-													retcode=p.waitFor();
-													if(retcode==0){		
-														System.out.println("finish executing jobs....."+WorkerJobPath+"/"+currentJob);
-														zkc.delete(WorkerJobPath+"/"+currentJob,-1);
-														}
-										
-									
-												} catch (Exception e) {
-													e.printStackTrace();
-												}	//TODO:assume this is running the child node for now
+											//Thread.sleep(2000);			//wait for everyone coming
+											for (String key: checkMap.keySet()) {
 												
-							                	 	
-							                	long endTime = System.nanoTime();	                            		
-									     		executionTime = (endTime - startTime);*/
-							                	/*checkMap.remove(currentJob);
-							                		//TODO:assume now updating result to RESULT_PATH directory
-							                	System.out.println("finish deleting, ready to move on");
-												Update_WorkerObj();	//delimited string   wkid:cpucoreNumber:jobspeed
-												String info = wk.toNodeDataString();
-												index+=1;
-							                	zkc.create(										//create free worker object
-														FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+index,       // Path
-														info,   // information
-														CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
-											 	);*/
+												executor.submit(checkMap.get(key));
+											}
+											
 			                           }
 	                           	
 	                        } catch (Exception e) {
@@ -246,7 +222,7 @@ public class Worker{	//worker node, need to know hardware configurations
 				Workerpath = zkc.getZooKeeper().create(WORKER_PATH+"/"+"worker-", null, ZkConnector.acl, CreateMode.EPHEMERAL_SEQUENTIAL);
 				String[] temp = Workerpath.split("-");
 				Workerid = temp[1];			//create workerid of this worker
-				
+				get_Host_Name();
 				Create_WorkerObj(Workerid);
 				String info = wk.toNodeDataString();
 				System.out.println(info);
@@ -316,6 +292,17 @@ public class Worker{	//worker node, need to know hardware configurations
     }
 
 
+	public void get_Host_Name(){
+		try{
+			Process p = Runtime.getRuntime().exec("hostname");
+				p.waitFor();		//create shell object and retrieve cpucore number
+			BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+			this.hostname=br.readLine();
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+	}
+
 
 	public void Update_WorkerObj(){
 		try{
@@ -323,7 +310,6 @@ public class Worker{	//worker node, need to know hardware configurations
     			p.waitFor();		//create shell object and retrieve cpucore number
 			BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
 			wk.cpucore = br.readLine();
-			System.out.println(wk.cpucore);
 			wk.executionTime= this.executionTime;
 			
 		

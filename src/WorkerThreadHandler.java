@@ -8,6 +8,7 @@ public class WorkerThreadHandler implements Runnable {
 		String currentJob;
 		static private int threadNumber=0;
 		int Qvalue;
+		int jobID;
 		@Override
 		public void run() {
 				long startTime = System.nanoTime();
@@ -26,14 +27,15 @@ public class WorkerThreadHandler implements Runnable {
 							                	 	
 					long endTime = System.nanoTime();	                            		
 					long executionTime = (endTime - startTime);
-					Worker.Thread_complete(executionTime, retcode, this.currentJob, this.threadNumber);
+					Worker.Thread_complete(executionTime, retcode, this.currentJob, this.threadNumber, this.Qvalue, this.inputLocation, this.jobID);
 		}
 		
-		public void setVal(String input, int val, String currentJob){
+		public void setVal(String input, int val, String currentJob, int jobid){
 			this.inputLocation = input;
 			this.Qvalue = val;
 			this.currentJob = currentJob;
 			this.threadNumber+=1;
+			this.jobID=jobid;
 		
 		}
 		public int get_thread_number(){
