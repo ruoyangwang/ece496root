@@ -37,6 +37,7 @@ import org.apache.zookeeper.data.Stat;
 public class Worker{	//worker node, need to know hardware configurations
 	static ZkConnector zkc;
 	static WorkerObject wk;
+	//static List<Thread> threadList= new List<Thread>();
 	static HashMap<String, String> checkMap = new HashMap<String,String>();
 	static int index=0;
     final static String JOB_TRACKER_PATH = "/jobTracker";
@@ -49,7 +50,7 @@ public class Worker{	//worker node, need to know hardware configurations
 
 	//Watcher fsWatcher;
 	Watcher WorkerWatcher;
-	String Workerid=null;			//workerid of this node(worker)
+	static String Workerid=null;			//workerid of this node(worker)
 	String Workerpath=null;
 	
 	long benchmarkTime = 0;
@@ -88,6 +89,30 @@ public class Worker{	//worker node, need to know hardware configurations
 		    try{ Thread.sleep(5000); } catch (Exception e) {}
 		} 
 	 }
+	 
+	 
+	public static void Thread_complete(long execution, int retcode, String currentJob){
+			synchronized(zkc){
+				if(retcode==0){	
+						String WorkerJobPath = JOBS_PATH+"/worker-"+Workerid;	
+						System.out.println("finish executing jobs....."+WorkerJobPath+"/"+currentJob);
+						zkc.delete(WorkerJobPath+"/"+currentJob,-1);
+				}
+										
+				checkMap.remove(currentJob);
+				//TODO:assume now updating result to RESULT_PATH directory
+				System.out.println("finish deleting, ready to move on");
+				//Update_WorkerObj();	//delimited string   wkid:cpucoreNumber:jobspeed
+				String info = wk.toNodeDataString();
+				index+=1;
+				zkc.create(										//create free worker object
+						FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+index,       // Path
+						info,   // information
+						CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
+				);
+			}	
+	}
+	
 	
 	public Worker(String hosts, String WorkerServerInfo){
 		//benchmarkTime=benchmark();
@@ -114,61 +139,66 @@ public class Worker{	//worker node, need to know hardware configurations
 	                 switch (event.getType()){
 	                 	case NodeChildrenChanged:
 	                 		try {
-	                            //if (path.equals(Workerpath)){
-	                            	Stat stat = zkc.exists(WorkerJobPath, null);
+	                 			synchronized(zkc){
+			                        //if (path.equals(Workerpath)){
+			                        	Stat stat = zkc.exists(WorkerJobPath, null);
 
-	                            	 List<String> children=zkc.getChildren(WorkerJobPath);
-	                            	for(String child: children){
-	                            		System.out.println(child);
-	                            		if(checkMap.get(child)==null){
-	                            			currentJob = child;
-	                            			checkMap.put(child,"occupied");
-			                        		taskinfo = zkc.getData(WorkerJobPath+"/"+child, null, stat);
-			                        		break;
-	                            		}
-	                            	}
-	                            	
-	                            	
-	                            	
-	                            	if(taskinfo!=null){
-	                            			System.out.println("taskinfo is not null, can execute now");
-					                    	JobObject jo = new JobObject();
-					                    	jo.parseJobString(taskinfo);
-					                    	int Qvalue= jo.nValue;
-					                    	String inputLocation= jo.inputFile;
-							         		long startTime = System.nanoTime();
-							         			
-					                    	try{ 
-												//mock of execution, depends on where we put zookeeper and NPAIRS executables we can change shell command 
-												System.out.println("executing jobs.....");
-												String command = "sh ../execute/execute.sh " + inputLocation+" "+ Qvalue;				
-												Process p = Runtime.getRuntime().exec(command);
-												retcode=p.waitFor();
-												if(retcode==0){		
-													System.out.println("finish executing jobs....."+WorkerJobPath+"/"+currentJob);
-													zkc.delete(WorkerJobPath+"/"+currentJob,-1);
-													}
+			                        	 List<String> children=zkc.getChildren(WorkerJobPath);
+			                        	for(String child: children){
+			                        		System.out.println(child);
+			                        		if(checkMap.get(child)==null){
+			                        			currentJob = child;
+			                        			checkMap.put(child,"occupied");
+					                    		taskinfo = zkc.getData(WorkerJobPath+"/"+child, null, stat);
+					                    		break;
+			                        		}
+			                        	}
+			                        	
+			                        	
+			                        	
+			                        	if(taskinfo!=null){
+			                        			System.out.println("taskinfo is not null, can execute now");
+							                	JobObject jo = new JobObject();
+							                	jo.parseJobString(taskinfo);
+							                	int Qvalue= jo.nValue;
+							                	String inputLocation= jo.inputFile;
+							                	WorkerThreadHandler t = new WorkerThreadHandler();
+							                	t.setVal(inputLocation, Qvalue, currentJob);
+							                	t.start();
+									     		/*long startTime = System.nanoTime();
+									     			
+							                	try{ 
+													//mock of execution, depends on where we put zookeeper and NPAIRS executables we can change shell command 
+													System.out.println("executing jobs.....");
+													String command = "sh ../execute/execute.sh " + inputLocation+" "+ Qvalue;				
+													Process p = Runtime.getRuntime().exec(command);
+													retcode=p.waitFor();
+													if(retcode==0){		
+														System.out.println("finish executing jobs....."+WorkerJobPath+"/"+currentJob);
+														zkc.delete(WorkerJobPath+"/"+currentJob,-1);
+														}
 										
 									
-											} catch (Exception e) {
-												e.printStackTrace();
-											}	//TODO:assume this is running the child node for now
-					                    	 	
-					                    	long endTime = System.nanoTime();	                            		
-							         		executionTime = (endTime - startTime);
-					                    	checkMap.remove(currentJob);
-					                    		//TODO:assume now updating result to RESULT_PATH directory
-					                    	System.out.println("finish deleting, ready to move on");
-											Update_WorkerObj();	//delimited string   wkid:cpucoreNumber:jobspeed
-											String info = wk.toNodeDataString();
-											index+=1;
-					                    	zkc.create(										//create free worker object
-													FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+index,       // Path
-													info,   // information
-													CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
-										 	);
-	                               }
-	                            		
+												} catch (Exception e) {
+													e.printStackTrace();
+												}	//TODO:assume this is running the child node for now
+												
+							                	 	
+							                	long endTime = System.nanoTime();	                            		
+									     		executionTime = (endTime - startTime);*/
+							                	/*checkMap.remove(currentJob);
+							                		//TODO:assume now updating result to RESULT_PATH directory
+							                	System.out.println("finish deleting, ready to move on");
+												Update_WorkerObj();	//delimited string   wkid:cpucoreNumber:jobspeed
+												String info = wk.toNodeDataString();
+												index+=1;
+							                	zkc.create(										//create free worker object
+														FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+index,       // Path
+														info,   // information
+														CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
+											 	);*/
+			                           }
+	                            }	
 	                        } catch (Exception e) {
 	                            e.printStackTrace();
 	                        }
