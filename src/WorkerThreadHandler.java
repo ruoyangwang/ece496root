@@ -1,12 +1,15 @@
 import java.net.*;
 import java.io.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 
-public class WorkerThreadHandler extends Thread {
+public class WorkerThreadHandler implements Runnable {
 		String inputLocation;
 		String currentJob;
+		static private int threadNumber=0;
 		int Qvalue;
-
-		public void start() {
+		@Override
+		public void run() {
 				long startTime = System.nanoTime();
 				int retcode = -1;					     			
 				 try{ 
@@ -23,14 +26,18 @@ public class WorkerThreadHandler extends Thread {
 							                	 	
 					long endTime = System.nanoTime();	                            		
 					long executionTime = (endTime - startTime);
-					Worker.Thread_complete(executionTime, retcode, this.currentJob);
+					Worker.Thread_complete(executionTime, retcode, this.currentJob, this.threadNumber);
 		}
 		
 		public void setVal(String input, int val, String currentJob){
 			this.inputLocation = input;
 			this.Qvalue = val;
 			this.currentJob = currentJob;
+			this.threadNumber+=1;
 		
+		}
+		public int get_thread_number(){
+			return this.threadNumber;
 		}
 		
 		

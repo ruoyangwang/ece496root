@@ -1,3 +1,3 @@
 #!/bin/bash
-nproc
+getconf _NPROCESSORS_ONLN
 

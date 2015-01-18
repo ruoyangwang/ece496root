@@ -29,7 +29,7 @@ public class WorkerObject {
 
 	public int Node_power(){
 		try{
-			Process p = Runtime.getRuntime().exec("cat /proc/meminfo |grep MemFree");
+			/*Process p = Runtime.getRuntime().exec("cat /proc/meminfo |grep MemFree");
     			p.waitFor();		//create shell object and retrieve cpucore number
 			BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
 			
@@ -44,8 +44,8 @@ public class WorkerObject {
 			BufferedReader fbr = new BufferedReader(new FileReader(new File("../system_config/memory_config.txt")));
 			int minimum_require = Integer.parseInt(fbr.readLine());
 			//System.out.println("test cpucore number...........");
-			//System.out.println(cpucore);
-			return Integer.parseInt(this.memFree)/minimum_require;//Math.min(Integer.parseInt(this.memFree)/minimum_require,Integer.parseInt(cpucore));
+			//System.out.println(cpucore);*/
+			return 8;//Integer.parseInt(this.memFree)/minimum_require;//Math.min(Integer.parseInt(this.memFree)/minimum_require,Integer.parseInt(cpucore));
 		
 		}catch (Exception e) {
             e.printStackTrace();
