@@ -276,7 +276,13 @@ public class Scheduler {
 		System.out.println("Scheduling jobs");   
 		if (workersList.size() > 0 && jobsList.size() > 0) {
 			// scheduler may depend on current state of the workers as well ??
-			jobQueue = ScheduleAlgo.scheduleJobs(workersList, jobsList); 
+                        ScheduleAlgo scheduler = new ScheduleAlgo();
+                        try{
+			    jobQueue = scheduler.scheduleJobs(workersList, jobsList); 
+                        } catch (Exception e) {
+                            System.out.println("Job scheduling failed, please check database");
+			    jobQueue = null;
+                        }
 		} else {
 			// no jobs
 			jobQueue = null;
