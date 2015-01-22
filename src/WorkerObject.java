@@ -6,6 +6,8 @@ public class WorkerObject {
 	// name of the worker. ie: dir name for this worker
 	private String workerName;
 	public String freeWorkerNodeName;
+        private String hostName;
+        public int MaxJobNumber;
 
 	// performance metrics -- not yet used
 	public long benchmarkTime;
@@ -27,6 +29,15 @@ public class WorkerObject {
 		return workerName;
 	}
 
+        public void setHostName(String hostName) {
+		this.hostName = hostName;
+	}
+        
+        public String getHostName() {
+		return hostName;
+	}
+
+
 	public int Node_power(){
 		try{
 			Process p = Runtime.getRuntime().exec("cat /proc/meminfo |grep MemFree");
@@ -43,7 +54,9 @@ public class WorkerObject {
 			
 			BufferedReader fbr = new BufferedReader(new FileReader(new File("../system_config/memory_config.txt")));
 			int minimum_require = Integer.parseInt(fbr.readLine());
-			return Math.min(Integer.parseInt(this.memFree)/minimum_require,Integer.parseInt(cpucore));
+			//System.out.println("test cpucore number...........");
+			//System.out.println(cpucore);
+			return Integer.parseInt(this.memFree)/minimum_require;//Math.min(Integer.parseInt(this.memFree)/minimum_require,Integer.parseInt(cpucore));
 		
 		}catch (Exception e) {
             e.printStackTrace();
