@@ -14,4 +14,5 @@ fi
 
 #echo "CLASSPATH=$CLASSPATH"
 
-"$JAVA" -cp ../src:"$CLASSPATH" Client localhost:2181
+#"$JAVA" -cp ../src:"$CLASSPATH" Client localhost:2181
+"$JAVA" -cp ../src:"$CLASSPATH" Client $1:2181

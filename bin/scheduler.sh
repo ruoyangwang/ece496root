@@ -14,4 +14,4 @@ fi
 
 #echo "CLASSPATH=$CLASSPATH"
 
-"$JAVA" -cp ../src:"$CLASSPATH" Scheduler localhost:2181
+"$JAVA" -cp ../src:"$CLASSPATH" Scheduler $1:2181

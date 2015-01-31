@@ -14,4 +14,4 @@ fi
 
 #echo "CLASSPATH=$CLASSPATH"
 
-"$JAVA" -cp ../src:"$CLASSPATH" JobTracker localhost:2181 $1
+"$JAVA" -cp ../src:"$CLASSPATH" JobTracker $1:2181 $2
