@@ -29,23 +29,38 @@ public class WorkerObject {
 
 	public int Node_power(){
 		try{
-			/*Process p = Runtime.getRuntime().exec("cat /proc/meminfo |grep MemFree");
-    			p.waitFor();		//create shell object and retrieve cpucore number
-			BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+			File f = new File("../execute/benchmark.sh");
+			if(!f.exists() || f.isDirectory()){
+				Process p = Runtime.getRuntime().exec("cat /proc/meminfo |grep MemFree");
+					p.waitFor();		//create shell object and retrieve cpucore number
+				BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
 			
-			while (br.readLine() != null){					//looking for FreeMem row 
-				String[] tokens = br.readLine().split("\\s+");
-				if(tokens[0].equals("MemFree:")){
-					this.memFree=tokens[1];
-					break;
+				while (br.readLine() != null){					//looking for FreeMem row 
+					String[] tokens = br.readLine().split("\\s+");
+					if(tokens[0].equals("MemFree:")){
+						this.memFree=tokens[1];
+						break;
+					}
+				}
+			
+				BufferedReader fbr = new BufferedReader(new FileReader(new File("../system_config/memory_config.txt")));
+				int minimum_require = Integer.parseInt(fbr.readLine());
+				//System.out.println("test cpucore number...........");
+				//System.out.println(cpucore);
+				//Integer.parseInt(this.memFree)/minimum_require;
+				return Math.min(Integer.parseInt(this.memFree)/minimum_require,Integer.parseInt(cpucore));
+			}
+			else{
+				String command = "sh ../execute/benchmark.sh ";				
+				Process p = Runtime.getRuntime().exec(command);
+				p.waitFor();
+				f = new File("../execute/result.log");
+				if(f.exists()){
+					BufferedReader fbr = new BufferedReader(new FileReader(f));
+					return Integer.parseInt(fbr.readLine());
 				}
 			}
-			
-			BufferedReader fbr = new BufferedReader(new FileReader(new File("../system_config/memory_config.txt")));
-			int minimum_require = Integer.parseInt(fbr.readLine());
-			//System.out.println("test cpucore number...........");
-			//System.out.println(cpucore);*/
-			return 8;//Integer.parseInt(this.memFree)/minimum_require;//Math.min(Integer.parseInt(this.memFree)/minimum_require,Integer.parseInt(cpucore));
+			return 5;
 		
 		}catch (Exception e) {
             e.printStackTrace();

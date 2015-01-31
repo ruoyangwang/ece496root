@@ -326,13 +326,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	}
 	
 	
-	
-	private long benchmark(){		//mock of benchmark
-		long startTime = System.nanoTime();
-		try{ Thread.sleep(1000); } catch (Exception e) {}
-		long elapsedTime = System.nanoTime() - startTime;
-		return elapsedTime;
-	}
+
 	
 	
 }
