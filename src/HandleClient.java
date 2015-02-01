@@ -7,8 +7,10 @@ public class HandleClient extends Thread{
 	private Socket socket = null;
 	ObjectInputStream fromClient = null;
 	private ObjectOutputStream toClient = null;
-	
-	
+	final static String SSH_SCRIPT = "ssh";
+	final static String WORKER_START_SCRIPT = "nohup ./worker.sh";	
+
+	List<Process> processList = new ArrayList<Process>();
 	// Constructor
 	public HandleClient(Socket socket) {
 		super("HandleClient");
@@ -16,6 +18,47 @@ public class HandleClient extends Thread{
 		System.out.println("Created a new Thread to handle client");
 
 	}
+
+	private List<String> hostStringToList (String hosts) {
+		List<String> hostList = new ArrayList<String>();
+		for(String host: hosts.split(",")) {
+			hostList.put(host);
+		}
+		return hostList;
+	}
+
+	private void startWorker(String host, String inputFile) {
+		String workerScript = WORKER_START_SCRIPT + " " + JobTracker.ZookeeperLocation + " " + inputFile + "&> worker.log &";
+		String command = "";
+		if (host.equalsIgnoreCase(new String("localhost"))) {
+			command = workerScript;
+
+		} else {
+			String sshScript = SSH_SCRIPT + " " + host;
+			command = sshScript + " \"" + workerScript + "\"";
+		}
+
+		
+		Process p = Runtime.getRuntime().exec(command);
+		processList.add(p);
+	}
+
+
+	private void startWorkers(List<String> hosts, String inputFile) {
+		for(String host: hosts) {
+			startWorker(host, inputFile);
+		}
+		
+		try {
+			sleep(5000);
+		} catch (Exception e) {;}
+		
+		for (Process p: processList) {
+			p.destroy();
+		}
+		
+	}
+
 	
 	private String newRequest(String inputFileName, String nValues){
 
@@ -91,9 +134,20 @@ public class HandleClient extends Thread{
 				
 				String inputFileName = temp[1];
 				String nValues = temp[2];
+				String workers = temp[3];
 
 				String jobId = newRequest(inputFileName, nValues);
+
+				startWorkers(workersNotStarted(hostStringToList(workers)), inputFileName);
+
+				JobTracker.CurrentJobFile = inputFileName;
+
+// TODO: check status............ and reset???
+
+
+
  				packetToClient="Tracking ID: " + jobId;
+
 			} else if(temp[0].equalsIgnoreCase(new String("status"))) {
 				System.out.println("A New Request: " + packetFromClient);
 				
@@ -108,6 +162,13 @@ public class HandleClient extends Thread{
 					packetToClient =  packetToClient + " Error occured. Please see log";
 				}
 				
+			} else if (temp[0].equalsIgnoreCase(new String("add"))) {
+				
+				String workers = temp[1];
+				String inputFileName = JobTracker.CurrentJobFile;
+
+				startWorkers(workersNotStarted(hostStringToList(workers)), inputFileName);
+				packetToClient="Hosts " + workers + " added to computation cluster.";
 			} else {
 				System.out.println("Unknown Request");
 

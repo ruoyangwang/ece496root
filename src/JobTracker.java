@@ -41,12 +41,16 @@ public class JobTracker {
 
     public static ServerSocket serverSocket = null;
 
+	public static String CurrentJobFile = null;
+
     final static String JOB_TRACKER_PATH = "/jobTracker";
 	final static String WORKER_PATH = "/worker";
 	final static String JOBS_PATH = "/jobs";
 	final static String SEQ_PATH = "/seq";
 	final static String RESULT_PATH = "/result";
 	final static String JOBPOOL_PATH = "/jobpool";
+
+	static String ZookeeperLocation = null;
 
 	/** 
      * constructor for job tracker
@@ -126,6 +130,28 @@ public class JobTracker {
 		}
 	}
 
+	public static synchronized String workersNotStarted(List hosts) {
+		List<String> workerList = zkc.getChildren(WORKER_PATH); 
+		l=workerList.listIterator();
+		
+		while(l.hasNext()){
+			String r = (String)l.next();
+			String rPath = WORKER_PATH + "/" + r;
+			String data = zkc.getData(rPath, null); // see if node in workerList exists in jobList
+
+			if(data != null) {
+				WorkerObject wo = new WorkerObject();
+				wo.parseNodeString(data);
+				
+				if (hosts.contains(wo.getHostname())) {
+					hosts.remove(wo.getHostname());
+				}
+
+			}
+		}
+		return hosts;
+
+	}
 
 	/**
 	 * Create a persistent foler with the specified path and value.
@@ -464,7 +490,7 @@ public class JobTracker {
 			return;
 		}		
 		
-		String zookeeperLocation = args[0];
+		ZookeeperLocation = args[0];
 		String portToListen = args[1];
 		String myHostName;
 
@@ -478,7 +504,7 @@ public class JobTracker {
 		jobTrackerServerInfo = myHostName + ":" + portToListen;
         System.out.println("Location of jobTracker: "+jobTrackerServerInfo);
 
-        JobTracker t = new JobTracker(zookeeperLocation);   
+        JobTracker t = new JobTracker(ZookeeperLocation);   
 		
         System.out.println("Sleeping...");
         t.tryToBeBoss();
