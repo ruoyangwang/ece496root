@@ -30,9 +30,9 @@ if [ $? -ne 0 ];then
   exit 1
 fi
 
-mkdir log
+mkdir log &> /dev/null
 
-echo "Initialize NPAIRS without Q value"
+echo "Initialize NPAIRS packege setup (without Q value)"
 echo ""
 cd data/$DATA_FILE
 ../../lib/jdk1.8.0_25/bin/java -Xmx8096m -jar ../../lib/npairs-20141008.jar NPAIRS RUN_ANALYSIS SetupFiles/RRSD_25Subjects_NPAIRSAnalysisSetup-num_splits\=1\,pcrange\=1-500.mat &> $DIR/log/init.log &

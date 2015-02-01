@@ -5,8 +5,8 @@
 
 swapMemLimit=`grep "SwapCached"  /proc/meminfo | awk '{print int($2/1024)}'`
 echo "Current Swapped Memory: "$swapMemLimit"MB"
-#All NPAIRS jobs should not use more than 100MB swapped mem
-swapMemLimit=100
+#All NPAIRS jobs should not use more than 500MB swapped mem
+swapMemLimit=500
 maxJobs=0
 PID=""
 while true;

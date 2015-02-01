@@ -1,74 +1,74 @@
 #!/bin/bash
 
+################################
+##usage: ./run_npairs.sh $Q_Value
+##exit code:
+##0: NPAIRS run successful
+##1: Bad arg
+##2: NPAIR run failed
+#################################
+
 #check input
-minQ=1
-maxQ=500
-if [[ $1 != *_log ]];
+ls SessionFiles/ &> /dev/null
+if [ $? -ne 0 ];
 then
-  echo "Error: first param must be the log dir name end with _log, e.g. 1234_log"
+  echo "Please run under data/\$DATA_NAME/ dir"
   exit 1
 fi
 
-for arg in "${@:2}";
-do
-  if [[ "$arg" -lt "$minQ" || "$arg" -gt "$maxQ" ]]
-  then
-    echo "Error: Bad input Q values ->"$arg
-    exit 1
-  fi
-done
+#Check args
+minQ=1
+maxQ=500
+if [ "$#" -ne 1 ];
+then
+  echo "Error: Invalid # of arg"
+  echo "Usage: First arg must be a Q value"
+  exit 1
+fi
 
-#TODO: check NPARIS initialization
+if [[ "$1" -lt "$minQ" || "$1" -gt "$maxQ" ]]
+then
+  echo "Error: Bad input Q values range ->"$1
+  echo "Usage: Q value range from 1 to 500(inclusive)"
+  exit 1
+fi
 
 #Create log dir
-log_dir=$1
+DATA_NAME=$(basename $(pwd))
+log_dir="../../log/$DATA_NAME"
 echo "Creating log dir "$log_dir
-rm -rf $log_dir
-mkdir $log_dir
+mkdir -p $log_dir
 
 #start CPU/RAM monitor
-echo "CPU/RAM usage log: "$log_dir"/cpu_mem_stat.cvs"
-dstat -cm --output $log_dir/cpu_mem_stat.csv 30 &> /dev/null  &
+USAGE_LOG="log_dir/cpu_mem_stat_Q_$1.cvs"
+echo "CPU/RAM usage log: $USAGE_LOG"
+dstat -cm --output $USAGE_LOG 30 &> /dev/null  &
 dstat_pid=$!
 
-pids=""
 
-#run NPAIRS with Q values from args (skip first arg)
-for qValue in ${@:2};
-do
-#  echo "Q= "$qValue
-#  echo "Q= "$qValue > $log_dir/"NPAIRS_Q_"$qValue".log"
-#  echo "All tasks completed in 324" > $log_dir/"NPAIRS_Q_"$qValue".log"
-#  sleep 5 &
-  ../../lib/jdk1.8.0_25/bin/java -Xmx8096m -jar ../../lib/npairs-20141008.jar NPAIRS RUN_ANALYSIS SetupFiles/RRSD_25Subjects_NPAIRSAnalysisSetup-num_splits\=1\,pcrange\=1-500.mat $qValue &> $log_dir/NPAIRS_Q_$qValue.log &
-  pids=$pids" "$!
-  sleep 1
-done
+#run NPAIRS with Q values 
+echo "Run NPAIRS with Q="$1
+echo "Expect LONG waiting time"
+NPAIRS_RUN_LOG="$log_dir/NPAIRS_RUN_Q_$1.log"
+echo "Log file: "$NPAIRS_RUN_LOG
+
+../../lib/jdk1.8.0_25/bin/java -Xmx8096m -jar ../../lib/npairs-20141008.jar NPAIRS RUN_ANALYSIS SetupFiles/RRSD_25Subjects_NPAIRSAnalysisSetup-num_splits\=1\,pcrange\=1-500.mat $1 &> $NPAIRS_RUN_LOG &
+pid=$!
+sleep 1
 
 #wait all NPAIRS
-echo "pids= "$pids
-wait $pids
+echo "pid= "$pid
+wait $pid
 
 kill $dstat_pid
-echo "All NPAIRS runs are finished"
+echo "NPAIRS run is finished"
 
-#Check whether all runs result
-echo "Veify results"
-for qValue in ${@:2};
-do
-  grep "All tasks completed in" $log_dir/NPAIRS_Q_$qValue.log &> /dev/null
-  if [ "$?" -ne "0" ];
-  then
-    echo "Failed NPAIR: Q="$qValue
-    echo $qValue >> $log_dir/failed_Q.log
-  fi
-done
-
-#check if we have any failed runs, failed Q will be saved below
-ls $log_dir"/failed_Q.log" &> /dev/null
-if [ "$?" -eq 0 ];
+#Check NPAIRS result
+echo "Veify result"
+grep "All tasks completed in" $NPAIRS_RUN_LOG &> /dev/null
+if [ "$?" -ne "0" ];
 then
-  echo "exit with failed NPARIS run(s)"
+  echo "Failed NPAIR: Q="$qValue
   exit 2
 fi
 
