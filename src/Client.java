@@ -150,7 +150,7 @@ public class Client {
 				// quit
 				return;
 
-			}else if (q.equalsIgnorCase(addHost)) {
+			}else if (q.equalsIgnoreCase(addHost)) {
 				// addHost
 
 				String hosts = null;

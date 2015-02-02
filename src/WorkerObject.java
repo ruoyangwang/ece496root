@@ -14,6 +14,9 @@ public class WorkerObject {
 	public String memFree;
 	public final String DELIMITER = ":";
 
+	public String hostName;
+
+
 	public WorkerObject() {
 	}
 
@@ -25,6 +28,14 @@ public class WorkerObject {
 	// Get the name for the znode of this worker.
 	public String getNodeName() {
 		return workerName;
+	}
+
+	public void setHostName(String hostName) {
+		this.hostName = hostName;	
+	}
+
+	public String getHostName() {
+		return this.hostName;
 	}
 
 	public int Node_power(){
