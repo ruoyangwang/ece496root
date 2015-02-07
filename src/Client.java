@@ -76,6 +76,7 @@ public class Client {
 		String run = "run";
 		String status = "status";
 		String addHost = "add";
+		String kill = "kill";
 
 		while(true){
 			System.out.println("");
@@ -143,6 +144,20 @@ public class Client {
 				}
 	
 				Request = "status:" + jobId;
+
+			}else if (kill.equalsIgnoreCase(type)) {
+				String jobId = null;
+					
+				if (commandComponents.size() >= 2) {
+					jobId = commandComponents.get(1);
+				}
+
+				if (jobId == null) {
+					System.out.println("Enter Job ID");
+					jobId = in.nextLine().trim();
+				}
+	
+				Request = "kill:" + jobId;
 
 			}else if(q.equalsIgnoreCase(type)){
 

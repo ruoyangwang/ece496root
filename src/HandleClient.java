@@ -198,11 +198,19 @@ public class HandleClient extends Thread{
 				packetToClient =  "Job ID - " + jobId + ":";
 				if (result == 1) {
 					packetToClient =  packetToClient + " Finished.";
+				} else if (result == 2) {
+					packetToClient =  packetToClient + " Was killed.";
 				} else if (result == 0) {
 					packetToClient =  packetToClient + " Not Finished.";
 				} else {
 					packetToClient =  packetToClient + " Error occured. Please see log";
 				}
+			} else if(temp[0].equalsIgnoreCase(new String("kill"))) {
+				System.out.println("A New Request: " + packetFromClient);
+				
+				String jobId = temp[1];
+				JobTracker.killJob(jobId);
+				packetToClient =  "Job - " + jobId + " killed";
 				
 			} else if (temp[0].equalsIgnoreCase(new String("add"))) {
 				

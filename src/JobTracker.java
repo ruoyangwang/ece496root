@@ -232,22 +232,21 @@ public class JobTracker {
 			System.out.println(RESULT_PATH + " does not exist in assignWork - 1");
 		}
 	}
-/*TODO
-	public static void killJob (String jobId) {
-		
+
+	public static void killJob (String jobId) {		
 		// set jobto killed in result path this will trigger workers to exit.
 		String p = RESULT_PATH + "/" + jobId;
-		stat = zkc.exists(p, null);
+		Stat stat = zkc.exists(p, null);
 		if (stat != null) {
 			int totalJobs = -1;
 			String data = zkc.getData(p, null, stat);
-			Srting[] splitData = data.split(":");			
-			String data = zkc.setData(p, splitData[0] + ":KILLED", -1);
+			String[] splitData = data.split(":");			
+			zkc.setData(p, splitData[0] + ":KILLED", -1);
 		}
 
-//		sleep(1000)
+		// remove jobs in job pool.
 		String jp = JOBPOOL_PATH + "/" + jobId;
-		Stat stat = zkc.exists(jp, null);
+	    stat = zkc.exists(jp, null);
 		if (stat != null) {
 			List<String> children = zkc.getChildren(jp);
 			for (String jobName: children) {
@@ -255,7 +254,7 @@ public class JobTracker {
 			}
 		}
 	}
-*/
+
 
 
 	private static void removeJobpoolJobID(String jobId) {
@@ -293,6 +292,10 @@ public class JobTracker {
 
 					System.out.println("Job ID: " + j + " incomplete");
 
+				} else if (re == 2){
+
+					System.out.println("Job ID: " + j + " killed");
+
 				}
 				
 			}
@@ -314,7 +317,12 @@ public class JobTracker {
 			int totalJobs = -1;
 			String data = zkc.getData(p, null, stat);
 			if (data != null) {
-				totalJobs = Integer.parseInt(data);
+				String[] splitData = data.split(":");
+				if (splitData[1].equalsIgnoreCase(new String("KILLED"))) {
+					// killed
+					return 2;
+				}
+				totalJobs = Integer.parseInt(splitData[0]);
 				
 				if (totalJobs < 0) {
 					System.out.println("ERROR: path: " + p + " has invalid data");
@@ -325,8 +333,10 @@ public class JobTracker {
 						if (removeCompletedJobs) {
 							removeJobpoolJobID(jobId);
 						}
+						// finished
 						return 1;
 					} else {
+						// unfinished
 						return 0;
 					}
 				}
@@ -344,12 +354,27 @@ public class JobTracker {
 	/**
 	 * Adds a job to the job pool
 	 */
-	public static synchronized void addToJobPool(JobObject job) {
+	public static synchronized boolean addToJobPool(JobObject job) {
 		Stat stat = zkc.exists(JOBPOOL_PATH, null);
 
 		if (stat != null) {
 
+			
+
+			// check if job was killed before adding to jobpool
+			String p = RESULT_PATH + "/" + job.jobId.toString();
+			stat = zkc.exists(p, null);
+			if (stat != null) {
+				int totalJobs = -1;
+				String data = zkc.getData(p, null, stat);
+				String[] splitData = data.split(":");
+				if (splitData[1].equalsIgnoreCase(new String("KILLED"))) {
+					return false;
+				}
+			}
+
 			String addP = job.getJobpoolParentPath();
+
 		    System.out.println("assigning job " + addP);
 			Stat stat2 = zkc.exists(addP, null);
 
@@ -365,6 +390,7 @@ public class JobTracker {
 		} else {
 			System.out.println(JOBPOOL_PATH + " does not exist in addToJobPool - 1");
 		}
+		return true;
 	}
 
 	/**
@@ -373,7 +399,7 @@ public class JobTracker {
 	private boolean reassignWork(String removedWorker){
 		// assigned job to the removed worker
 		List<String> assignedList = zkc.getChildren(JOBS_PATH + "/" + removedWorker);
-		
+		boolean workWasAssigned = false;
 		if (assignedList.size() > 0) {
 			Iterator l;
 			l = assignedList.listIterator();
@@ -402,7 +428,10 @@ public class JobTracker {
 
 						System.out.println("Adding into jobpool, data:" + data);
 
-						addToJobPool(j);
+						boolean w = addToJobPool(j);
+						if (w) {
+							workWasAssigned = true;
+						}
 
 						System.out.println("Deleting job: " + rPath);
 						zkc.delete(rPath, -1);
@@ -411,9 +440,8 @@ public class JobTracker {
 					}
 				}
 			}
-			return true;
 		}
-		return false;
+		return workWasAssigned;
 	}
 
 
@@ -472,6 +500,8 @@ public class JobTracker {
 	}
 
 	private void handleLeftWorkers() {
+
+		// add unfinished jobs under left workers to jobpool
 		List<String> jobList = zkc.getChildren(JOBS_PATH);
 		boolean workReassigned = false;
 		ListIterator l;
@@ -486,9 +516,6 @@ public class JobTracker {
 				workReassigned = workReassigned || reassignWork(r);
 				zkc.delete(JOBS_PATH + "/" + r, -1);
 			} 
-			//else {
-				//System.out.println("Path: "+ rPath + " has stat: " + stat.toString());
-			//}
 		}
 
 		if (workReassigned) {
