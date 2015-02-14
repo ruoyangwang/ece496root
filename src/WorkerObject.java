@@ -14,9 +14,8 @@ public class WorkerObject {
 	public String memFree;
 	public final String DELIMITER = ":";
 	public int maxJobNum;
+
 	public String hostName;
-	public WorkerObject() {
-	}
 
 	public WorkerObject(String workerName) {
 		// worker name including the id
@@ -28,7 +27,6 @@ public class WorkerObject {
 		return workerName;
 	}
 
-
 	public int get_MaxJobNum(){
 
 		return this.maxJobNum;
@@ -37,10 +35,15 @@ public class WorkerObject {
 	}
 
 	
-	public String get_hostName(){
-		return this.hostName;
-	}	
 	
+	public void setHostName(String hostName) {
+		this.hostName = hostName;	
+	}
+
+	public String getHostName() {
+		return this.hostName;
+	}
+
 	
 	public int Node_power(String filename){
 		try{

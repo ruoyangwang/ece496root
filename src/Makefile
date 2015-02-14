@@ -1,7 +1,7 @@
 all: jobTracker client Worker scheduler
 
 jobTracker:
-	javac -Xlint:unchecked -classpath ../lib/zookeeper-3.4.6.jar:../lib/log4j-1.2.16.jar ZkConnector.java JobTracker.java HandleClient.java JobObject.java
+	javac -Xlint:unchecked -classpath ../lib/zookeeper-3.4.6.jar:../lib/log4j-1.2.16.jar ZkConnector.java JobTracker.java WorkerObject.java HandleClient.java JobObject.java
 client:
 	javac -Xlint:unchecked -classpath ../lib/zookeeper-3.4.6.jar:../lib/log4j-1.2.16.jar ZkConnector.java Client.java
 

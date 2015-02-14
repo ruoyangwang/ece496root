@@ -41,12 +41,16 @@ public class JobTracker {
 
     public static ServerSocket serverSocket = null;
 
+	public static String CurrentJobFile = null;
+
     final static String JOB_TRACKER_PATH = "/jobTracker";
 	final static String WORKER_PATH = "/worker";
 	final static String JOBS_PATH = "/jobs";
 	final static String SEQ_PATH = "/seq";
 	final static String RESULT_PATH = "/result";
 	final static String JOBPOOL_PATH = "/jobpool";
+
+	static String ZookeeperLocation = null;
 
 	/** 
      * constructor for job tracker
@@ -96,6 +100,14 @@ public class JobTracker {
                             } };
     }
 
+	public static String getZookeeperHost () {
+		if (ZookeeperLocation == null)
+			return null;
+
+		String[] location = ZookeeperLocation.split(":");
+		return location[0];
+	}
+
 	public static synchronized Integer getSequenceNum(){
     	Stat stat = null;
     	stat = zkc.exists(SEQ_PATH, null);
@@ -126,6 +138,30 @@ public class JobTracker {
 		}
 	}
 
+	public static synchronized List<String> workersNotStarted(List hosts) {
+		List<String> workerList = zkc.getChildren(WORKER_PATH); 
+		List<String> removed = new ArrayList<String>();
+		Iterator l=workerList.listIterator();
+		Stat s = null;
+		while(l.hasNext()){
+			String r = (String)l.next();
+			String rPath = WORKER_PATH + "/" + r;
+			String data = zkc.getData(rPath, null, s); // see if node in workerList exists in jobList
+
+			if(data != null) {
+				WorkerObject wo = new WorkerObject();
+				wo.parseNodeString(data);
+				String hostName = wo.getHostName();
+				if (hostName != null) {
+					if (hosts.contains(hostName)) {
+						hosts.remove(hostName);
+						removed.add(hostName);
+					}
+				}
+			}
+		}
+		return removed;
+	}
 
 	/**
 	 * Create a persistent foler with the specified path and value.
@@ -189,13 +225,37 @@ public class JobTracker {
 		if (stat != null) {
 			String addP = RESULT_PATH + "/" + jobId;
 		    System.out.println("Adding job id to result path: " + addP);
-
-			createOnePersistentFolder(addP, count.toString());
+			
+			createOnePersistentFolder(addP, count.toString()+":ACTIVE");
 
 		} else {
 			System.out.println(RESULT_PATH + " does not exist in assignWork - 1");
 		}
 	}
+
+	public static void killJob (String jobId) {		
+		// set jobto killed in result path this will trigger workers to exit.
+		String p = RESULT_PATH + "/" + jobId;
+		Stat stat = zkc.exists(p, null);
+		if (stat != null) {
+			int totalJobs = -1;
+			String data = zkc.getData(p, null, stat);
+			String[] splitData = data.split(":");			
+			zkc.setData(p, splitData[0] + ":KILLED", -1);
+		}
+
+		// remove jobs in job pool.
+		String jp = JOBPOOL_PATH + "/" + jobId;
+	    stat = zkc.exists(jp, null);
+		if (stat != null) {
+			List<String> children = zkc.getChildren(jp);
+			for (String jobName: children) {
+				zkc.delete(jp + "/" + jobName, -1);
+			}
+		}
+	}
+
+
 
 	private static void removeJobpoolJobID(String jobId) {
 		String p = JOBPOOL_PATH + "/" + jobId;
@@ -210,14 +270,59 @@ public class JobTracker {
 		}
 	}
 	
-	public static int checkResult(String jobId) {
+	// returns the job running or null if none
+	public static String hasRunningJob() {
+		
+		Stat stat = zkc.exists(JOBPOOL_PATH, null);
+		List<String> completed = new ArrayList<String>();
+		String unfinished = null;
+		if (stat != null) {
+			List<String> allJobs = zkc.getChildren(JOBPOOL_PATH);
+			for(String j : allJobs) {
+				
+				int re = checkResult(j, false);
+				if (re == 1) {
+					// finished
+					completed.add(j);
+					System.out.println("Job ID: " + j + " completed");
+
+				} else if (re == 0){
+					// unfinished
+					unfinished = j;
+
+					System.out.println("Job ID: " + j + " incomplete");
+
+				} else if (re == 2){
+
+					System.out.println("Job ID: " + j + " killed");
+
+				}
+				
+			}
+		}
+
+		if (completed.size()> 0) {
+			for(String j : completed) {
+				removeJobpoolJobID(j);
+			}
+		}
+
+		return unfinished;
+	}
+
+	public static int checkResult(String jobId, boolean removeCompletedJobs) {
 		String p = RESULT_PATH + "/" + jobId;
 		Stat stat = zkc.exists(p, null);
 		if (stat != null) {
 			int totalJobs = -1;
 			String data = zkc.getData(p, null, stat);
 			if (data != null) {
-				totalJobs = Integer.parseInt(data);
+				String[] splitData = data.split(":");
+				if (splitData[1].equalsIgnoreCase(new String("KILLED"))) {
+					// killed
+					return 2;
+				}
+				totalJobs = Integer.parseInt(splitData[0]);
 				
 				if (totalJobs < 0) {
 					System.out.println("ERROR: path: " + p + " has invalid data");
@@ -225,9 +330,13 @@ public class JobTracker {
 					int finished = zkc.getChildren(p).size();
 					
 					if (finished == totalJobs) {
-						removeJobpoolJobID(jobId);
+						if (removeCompletedJobs) {
+							removeJobpoolJobID(jobId);
+						}
+						// finished
 						return 1;
 					} else {
+						// unfinished
 						return 0;
 					}
 				}
@@ -245,12 +354,27 @@ public class JobTracker {
 	/**
 	 * Adds a job to the job pool
 	 */
-	public static synchronized void addToJobPool(JobObject job) {
+	public static synchronized boolean addToJobPool(JobObject job) {
 		Stat stat = zkc.exists(JOBPOOL_PATH, null);
 
 		if (stat != null) {
 
+			
+
+			// check if job was killed before adding to jobpool
+			String p = RESULT_PATH + "/" + job.jobId.toString();
+			stat = zkc.exists(p, null);
+			if (stat != null) {
+				int totalJobs = -1;
+				String data = zkc.getData(p, null, stat);
+				String[] splitData = data.split(":");
+				if (splitData[1].equalsIgnoreCase(new String("KILLED"))) {
+					return false;
+				}
+			}
+
 			String addP = job.getJobpoolParentPath();
+
 		    System.out.println("assigning job " + addP);
 			Stat stat2 = zkc.exists(addP, null);
 
@@ -266,6 +390,7 @@ public class JobTracker {
 		} else {
 			System.out.println(JOBPOOL_PATH + " does not exist in addToJobPool - 1");
 		}
+		return true;
 	}
 
 	/**
@@ -274,7 +399,7 @@ public class JobTracker {
 	private boolean reassignWork(String removedWorker){
 		// assigned job to the removed worker
 		List<String> assignedList = zkc.getChildren(JOBS_PATH + "/" + removedWorker);
-		
+		boolean workWasAssigned = false;
 		if (assignedList.size() > 0) {
 			Iterator l;
 			l = assignedList.listIterator();
@@ -303,7 +428,10 @@ public class JobTracker {
 
 						System.out.println("Adding into jobpool, data:" + data);
 
-						addToJobPool(j);
+						boolean w = addToJobPool(j);
+						if (w) {
+							workWasAssigned = true;
+						}
 
 						System.out.println("Deleting job: " + rPath);
 						zkc.delete(rPath, -1);
@@ -312,9 +440,8 @@ public class JobTracker {
 					}
 				}
 			}
-			return true;
 		}
-		return false;
+		return workWasAssigned;
 	}
 
 
@@ -373,6 +500,8 @@ public class JobTracker {
 	}
 
 	private void handleLeftWorkers() {
+
+		// add unfinished jobs under left workers to jobpool
 		List<String> jobList = zkc.getChildren(JOBS_PATH);
 		boolean workReassigned = false;
 		ListIterator l;
@@ -387,9 +516,6 @@ public class JobTracker {
 				workReassigned = workReassigned || reassignWork(r);
 				zkc.delete(JOBS_PATH + "/" + r, -1);
 			} 
-			//else {
-				//System.out.println("Path: "+ rPath + " has stat: " + stat.toString());
-			//}
 		}
 
 		if (workReassigned) {
@@ -464,7 +590,7 @@ public class JobTracker {
 			return;
 		}		
 		
-		String zookeeperLocation = args[0];
+		ZookeeperLocation = args[0];
 		String portToListen = args[1];
 		String myHostName;
 
@@ -478,7 +604,7 @@ public class JobTracker {
 		jobTrackerServerInfo = myHostName + ":" + portToListen;
         System.out.println("Location of jobTracker: "+jobTrackerServerInfo);
 
-        JobTracker t = new JobTracker(zookeeperLocation);   
+        JobTracker t = new JobTracker(ZookeeperLocation);   
 		
         System.out.println("Sleeping...");
         t.tryToBeBoss();
