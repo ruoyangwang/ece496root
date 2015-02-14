@@ -13,7 +13,8 @@ public class WorkerObject {
 	public String cpucore;
 	public String memFree;
 	public final String DELIMITER = ":";
-
+	public int maxJobNum;
+	public String hostName;
 	public WorkerObject() {
 	}
 
@@ -27,9 +28,23 @@ public class WorkerObject {
 		return workerName;
 	}
 
-	public int Node_power(){
+
+	public int get_MaxJobNum(){
+
+		return this.maxJobNum;
+
+
+	}
+
+	
+	public String get_hostName(){
+		return this.hostName;
+	}	
+	
+	
+	public int Node_power(String filename){
 		try{
-			File f = new File("../execute/benchmark.sh");
+			File f = new File("../NPAIRS/init_NPAIRS.sh");
 			if(!f.exists() || f.isDirectory()){
 				Process p = Runtime.getRuntime().exec("cat /proc/meminfo |grep MemFree");
 					p.waitFor();		//create shell object and retrieve cpucore number
@@ -48,19 +63,21 @@ public class WorkerObject {
 				//System.out.println("test cpucore number...........");
 				//System.out.println(cpucore);
 				//Integer.parseInt(this.memFree)/minimum_require;
+				this.maxJobNum = Math.min(Integer.parseInt(this.memFree)/minimum_require,Integer.parseInt(cpucore));
 				return Math.min(Integer.parseInt(this.memFree)/minimum_require,Integer.parseInt(cpucore));
 			}
 			else{
-				String command = "sh ../execute/benchmark.sh ";				
+				String command = "sh ../NPAIRS/init_NPAIRS.sh "+filename;				
 				Process p = Runtime.getRuntime().exec(command);
-				p.waitFor();
-				f = new File("../execute/result.log");
+				int retcode = p.waitFor();
+				f = new File("../NPAIRS/log/maxJobs.info");
 				if(f.exists()){
 					BufferedReader fbr = new BufferedReader(new FileReader(f));
+					this.maxJobNum= Integer.parseInt(fbr.readLine());
 					return Integer.parseInt(fbr.readLine());
 				}
 			}
-			return 5;
+			return 1;
 		
 		}catch (Exception e) {
             e.printStackTrace();
@@ -68,9 +85,7 @@ public class WorkerObject {
         }
 
 	}
-	/*public void setHardwareInfo(String[] temp){
-		hardwareInfo = Arrays.copyOf( temp, temp.length );
-	}*/
+	
 	// TODO: this is not yet used		
 	// Parse the data string to get object representation
 	public void parseNodeString(String nodeDataString) {
