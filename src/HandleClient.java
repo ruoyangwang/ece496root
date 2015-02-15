@@ -46,23 +46,23 @@ public class HandleClient extends Thread{
 	}
 
 
-	private void startWorker(String host, String inputFile) {
+	private void startWorker(String host, String inputFile, String jobId) {
 		//String workerScript = "cd "+ WORKER_LOCATION +" "+ WORKER_START_SCRIPT + " " + JobTracker.getZookeeperHost() + " " + inputFile + "> worker.log &";
-		String workerScript = "cd "+ WORKER_LOCATION +" && "+ WORKER_START_SCRIPT + " " + JobTracker.getZookeeperHost() + ">> worker.log &";
+		//String workerScript = "cd "+ WORKER_LOCATION +" && "+ WORKER_START_SCRIPT + " " + JobTracker.getZookeeperHost() + " " + inputFile + " " + jobId + ">> worker.log &";
 		String command = "";
 		
-		if (host.equalsIgnoreCase(new String("localhost"))) {
+		/*if (host.equalsIgnoreCase(new String("localhost"))) {
 			command = workerScript;
 
 		} else {
 			String sshScript = SSH_SCRIPT + " " + host;
 			command = sshScript + " \"" + workerScript + "\"";
-		}
+		}*/
 
 		
 
 
-		command = "sh ../execute/startWorkers.sh " + host + " " + JobTracker.getZookeeperHost();
+		command = "sh ../execute/startWorkers.sh " + host + " " + JobTracker.getZookeeperHost() + " " + inputFile + " " + jobId;
 		System.out.println("Starting worker on " + host + " with command: " + command);
 		Process p = null;
 		try {
@@ -78,9 +78,9 @@ public class HandleClient extends Thread{
 	}
 
 
-	private void startWorkers(List<String> hosts, String inputFile) {
+	private void startWorkers(List<String> hosts, String inputFile, String jobId) {
 		for(String host: hosts) {
-			startWorker(host, inputFile);
+			startWorker(host, inputFile, jobId);
 		}		
 	}
 
@@ -179,13 +179,14 @@ public class HandleClient extends Thread{
 					
 				} else {
 
-					List<String> allWorkers = hostStringToList(workers);
-					List<String> startedWorkers = JobTracker.workersNotStarted(allWorkers);
-					startWorkers(allWorkers, inputFileName);
+					String jobId = newRequest(inputFileName, nValues);
 
 					JobTracker.CurrentJobFile = inputFileName;
+					JobTracker.CurrentJobId = jobId;
 
-					String jobId = newRequest(inputFileName, nValues);
+					List<String> allWorkers = hostStringToList(workers);
+					List<String> startedWorkers = JobTracker.workersNotStarted(allWorkers);
+					startWorkers(allWorkers, inputFileName, jobId);
 
 					destroyWorkerStartingProcesses();
 	 				packetToClient="Tracking ID: " + jobId;
@@ -216,12 +217,13 @@ public class HandleClient extends Thread{
 				
 				String workers = temp[1];
 				String inputFileName = JobTracker.CurrentJobFile;
+				String jobId = JobTracker.CurrentJobId;
 
 				List<String> allWorkers = hostStringToList(workers);
 
 				List<String> startedWorkers = JobTracker.workersNotStarted(allWorkers);
 
-				startWorkers(allWorkers, inputFileName);
+				startWorkers(allWorkers, inputFileName, jobId);
 
 				destroyWorkerStartingProcesses();
 				packetToClient="Hosts " + arrayToString(allWorkers) + " added to computation cluster.\n" + arrayToString(startedWorkers) + " were already started.";

@@ -42,6 +42,7 @@ public class JobTracker {
     public static ServerSocket serverSocket = null;
 
 	public static String CurrentJobFile = null;
+	public static String CurrentJobId = null;
 
     final static String JOB_TRACKER_PATH = "/jobTracker";
 	final static String WORKER_PATH = "/worker";
