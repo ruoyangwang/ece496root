@@ -75,7 +75,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	long executionTime = 0;
 	
 	public static void main(String[] args) throws IOException, KeeperException, InterruptedException, NumberFormatException, ClassNotFoundException {
-		if (args.length != 1) {
+		if (args.length != 3) {
             System.out.println("Usage: java -classpath lib/zookeeper-3.3.2.jar:lib/log4j-1.2.15.jar:. Worker zkServer:zkPort");
             return;
         }
@@ -85,8 +85,8 @@ public class Worker{	//worker node, need to know hardware configurations
 		String WorkerServerInfo;
 		
 		/*get input file name for benchmark*/
-		inputName = args[0];
-		JobName = args[1];
+		inputName = args[1];
+		JobName = args[2];
 		
 		try{
 			myHostName = InetAddress.getLocalHost().getHostName();
@@ -125,6 +125,7 @@ public class Worker{	//worker node, need to know hardware configurations
 				ResultObject RO = new ResultObject(hostname, location, execution, jobID, Q);
 				String resultInfo = RO.toNodeDataString();
 				index+=1;
+				/*count -1 */
 				iterator_decrement();
 				
 				zkc.create(										//create free worker object
@@ -139,7 +140,7 @@ public class Worker{	//worker node, need to know hardware configurations
 				zkc.create(
 						RESULT_PATH+"/"+jobID+"/"+RO.get_Result_Node_Name(),
 						resultInfo,
-						CreateMode.EPHEMERAL
+						CreateMode.PERSISTENT
 				);
 
 				if(iterator == 0){			//if all worker are completed (Free)
@@ -235,6 +236,9 @@ public class Worker{	//worker node, need to know hardware configurations
 	             switch (event.getType()){
 					case NodeChildrenChanged:
 	                 		try {
+	                 				System.out.println("inside the ResultWatcher for watching result root");
+	                 				
+	                 				
 	                 				String Jobinfo =null;
 			             			synchronized(zkc){
 					         			String ResultChildrenPath= RESULT_PATH+"/"+JobName;
@@ -242,14 +246,15 @@ public class Worker{	//worker node, need to know hardware configurations
 										Jobinfo = zkc.getData(ResultChildrenPath, null, stat);
 									}
 									String[] tokens = Jobinfo.split(":");
+									System.out.println("check tokens:  ------ "+tokens[0]+" ---- "+tokens[1]);
 									if(Qcount ==0)
 										Qcount = Integer.parseInt(tokens[0]);
 										
-									if(tokens[1].equals("active"))
-										CurrentState= "active";
+									if(tokens[1].equalsIgnoreCase("ACTIVE"))
+										CurrentState= "ACTIVE";
 										//zkc.getChildren(RESULT_PATH+"/"+this.JobName, ResultChildrenWatcher);
-									else if(tokens[1].equals("kill")){
-										CurrentState= "kill";
+									else if(tokens[1].equalsIgnoreCase("KILL")){
+										CurrentState= "KILL";
 										System.exit(-1);		//scheduler ask to kill myself now
 									}
 								
@@ -286,7 +291,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	                        }
 
 	             }
-	             if(iterator ==0 && CurrentState.equals("active"))			//start watching the children only if all workers are free
+	             if(iterator ==0 && CurrentState.equalsIgnoreCase("ACTIVE"))			//start watching the children only if all workers are free
 	             	zkc.getChildren(RESULT_PATH+"/"+JobName, ResultChildWatcher);
 	            }
 	        };
@@ -320,7 +325,7 @@ public class Worker{	//worker node, need to know hardware configurations
 				this.max_executions= wk.Node_power(inputName);
 				if(this.max_executions ==-1)
 					this.max_executions=1;
-
+				wk.setHostName(this.hostname);
 				String info = wk.toNodeDataString();
 				System.out.println(info);
 				
