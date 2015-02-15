@@ -16,6 +16,10 @@ public class WorkerObject {
 	public int maxJobNum;
 
 	public String hostName;
+	
+	public WorkerObject(){
+		this.workerName = "temp";
+	}
 
 	public WorkerObject(String workerName) {
 		// worker name including the id
