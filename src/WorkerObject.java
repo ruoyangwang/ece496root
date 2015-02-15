@@ -74,6 +74,7 @@ public class WorkerObject {
 				return Math.min(Integer.parseInt(this.memFree)/minimum_require,Integer.parseInt(cpucore));
 			}
 			else{
+				System.out.println("start to execute init_NPAIRS script.......");
 				String command = "sh ../NPAIRS/init_NPAIRS.sh "+filename;				
 				Process p = Runtime.getRuntime().exec(command);
 				int retcode = p.waitFor();
@@ -108,7 +109,7 @@ public class WorkerObject {
 	// TODO: this is not yet used		
 	// Get the string representation of the data in the znode.
 	public String toNodeDataString() {
-		String buffer = this.workerName+ this.DELIMITER+ this.cpucore+ this.DELIMITER+this.executionTime;
+		String buffer = this.workerName+ this.DELIMITER+this.hostName+this.DELIMITER+ this.cpucore+ this.DELIMITER+this.executionTime;
 		return buffer;
 	}
 

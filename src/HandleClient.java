@@ -67,14 +67,15 @@ public class HandleClient extends Thread{
 		Process p = null;
 		try {
 			p = Runtime.getRuntime().exec(command);
-			sleep(1000);
+			//p.waitFor();
+			//sleep(1000);
 		} catch(Exception e) {
 			System.out.println("Exception at startWorker");
 		}
-
+/*
 		if (p != null) {
 			processList.add(p);
-		}
+		}*/
 	}
 
 
@@ -85,10 +86,10 @@ public class HandleClient extends Thread{
 	}
 
 	private void destroyWorkerStartingProcesses() {
-		/*try {
+		try {
 			sleep(5000);
 		} catch (Exception e) {;}
-		
+		/*
 		System.out.println("Killing worker starting processes");
 		for (Process p: processList) {
 			p.destroy();
