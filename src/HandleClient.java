@@ -181,8 +181,7 @@ public class HandleClient extends Thread{
 
 					String jobId = newRequest(inputFileName, nValues);
 
-					JobTracker.CurrentJobFile = inputFileName;
-					JobTracker.CurrentJobId = jobId;
+					JobTracker.setCurrentJob(inputFileName, jobId);
 
 					List<String> allWorkers = hostStringToList(workers);
 					List<String> startedWorkers = JobTracker.workersNotStarted(allWorkers);

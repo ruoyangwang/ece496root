@@ -166,7 +166,7 @@ public class Client {
 				// quit
 				return;
 
-			}else if (q.equalsIgnoreCase(addHost)) {
+			}else if (addHost.equalsIgnoreCase(type)) {
 				// addHost
 
 				String hosts = null;

@@ -50,6 +50,7 @@ public class JobTracker {
 	final static String SEQ_PATH = "/seq";
 	final static String RESULT_PATH = "/result";
 	final static String JOBPOOL_PATH = "/jobpool";
+	final static String CURRENT_JOB_PATH = "/currentJob";
 
 	static String ZookeeperLocation = null;
 
@@ -185,6 +186,24 @@ public class JobTracker {
         }
     }
 
+	public static synchronized void setCurrentJob (String filename, String jobId) {
+		CurrentJobFile = filename;
+		CurrentJobId = jobId;
+
+		zkc.setData(CURRENT_JOB_PATH, filename + ":" + jobId, -1);
+ 	}
+
+	private static void getCurrentJob() {
+		Stat stat = null;
+		String data = zkc.getData(CURRENT_JOB_PATH, null, stat);
+		if (data != null && data.length() > 1) {
+			String[] info = data.split(":");
+			CurrentJobFile = info[0];
+			CurrentJobId = info[1];
+		}
+	}
+
+
 	/**
 	 * Create persistent folders.
  	 */
@@ -203,6 +222,8 @@ public class JobTracker {
 
 		// create jobpool folder
 		createOnePersistentFolder(JOBPOOL_PATH, "1");
+
+		createOnePersistentFolder(CURRENT_JOB_PATH, null);
     }
 
 	/**
@@ -322,6 +343,8 @@ public class JobTracker {
 				if (splitData[1].equalsIgnoreCase(new String("KILLED"))) {
 					// killed
 					return 2;
+				} else if (splitData[1].equalsIgnoreCase(new String("COMPLETED"))) {
+					return 1;
 				}
 				totalJobs = Integer.parseInt(splitData[0]);
 				
@@ -334,6 +357,8 @@ public class JobTracker {
 						if (removeCompletedJobs) {
 							removeJobpoolJobID(jobId);
 						}
+						zkc.setData(p, splitData[0] + ":COMPLETED", -1);
+						
 						// finished
 						return 1;
 					} else {
@@ -564,7 +589,7 @@ public class JobTracker {
 
 				System.out.println("Primary jobTracker!");
 				createPersistentFolders();
-
+				getCurrentJob();
 				balanceWorkerDir();
 			}
         } 
