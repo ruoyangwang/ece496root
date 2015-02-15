@@ -235,34 +235,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	             public void process(WatchedEvent event) {
 	             switch (event.getType()){
 					case NodeChildrenChanged:
-	                 		try {
-	                 				System.out.println("inside the ResultWatcher for watching result root");
-	                 				
-	                 				
-	                 				String Jobinfo =null;
-			             			synchronized(zkc){
-					         			String ResultChildrenPath= RESULT_PATH+"/"+JobName;
-										Stat stat = zkc.exists(ResultChildrenPath, null);	
-										Jobinfo = zkc.getData(ResultChildrenPath, null, stat);
-									}
-									String[] tokens = Jobinfo.split(":");
-									System.out.println("check tokens:  ------ "+tokens[0]+" ---- "+tokens[1]);
-									if(Qcount ==0)
-										Qcount = Integer.parseInt(tokens[0]);
-										
-									if(tokens[1].equalsIgnoreCase("ACTIVE"))
-										CurrentState= "ACTIVE";
-										//zkc.getChildren(RESULT_PATH+"/"+this.JobName, ResultChildrenWatcher);
-									else if(tokens[1].equalsIgnoreCase("KILL")){
-										CurrentState= "KILL";
-										System.exit(-1);		//scheduler ask to kill myself now
-									}
-								
-
-	                 		}
-	                 		catch(Exception e) {
-	                            e.printStackTrace();
-	                        }
+	                 		Result_Watch();
 
 	             	}
 	             
@@ -304,6 +277,42 @@ public class Worker{	//worker node, need to know hardware configurations
 		
        
 	}
+	
+	public void Result_Watch(){
+		try {
+	               System.out.println("inside the ResultWatcher for watching result root");
+	                 				
+	                 				
+	               String Jobinfo =null;
+			       synchronized(zkc){
+		         			String ResultChildrenPath= RESULT_PATH+"/"+JobName;
+							Stat stat = zkc.exists(ResultChildrenPath, null);	
+							Jobinfo = zkc.getData(ResultChildrenPath, null, stat);
+						}
+						if(Jobinfo !=null){
+							String[] tokens = Jobinfo.split(":");
+							System.out.println("check tokens:  ------ "+tokens[0]+" ---- "+tokens[1]);
+							if(Qcount ==0)
+								Qcount = Integer.parseInt(tokens[0]);
+							
+							if(tokens[1].equalsIgnoreCase("ACTIVE"))
+								CurrentState= "ACTIVE";
+								//zkc.getChildren(RESULT_PATH+"/"+this.JobName, ResultChildrenWatcher);
+							else if(tokens[1].equalsIgnoreCase("KILL")){
+								CurrentState= "KILL";
+								System.exit(-1);		//scheduler ask to kill myself now
+							}
+						}
+					
+
+         		}
+         		catch(Exception e) {
+                    e.printStackTrace();
+                }		
+	
+	}
+	
+	
 	
 	public synchronized static void iterator_increment(){
 		iterator+=1;
@@ -351,6 +360,7 @@ public class Worker{	//worker node, need to know hardware configurations
 		        /*watch worker, ready to work*/
 				zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
 				/*watch result, wait to get Job*/
+				Result_Watch();
 				zkc.getChildren(RESULT_PATH, ResultWatcher);
 
 
