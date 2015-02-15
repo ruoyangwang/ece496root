@@ -1,4 +1,4 @@
 #!/bin/bash
 echo "start"
-sleep 10
+sleep 50
 echo "done"

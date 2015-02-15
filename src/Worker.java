@@ -110,11 +110,11 @@ public class Worker{	//worker node, need to know hardware configurations
 	 
 	public static void Thread_complete(long execution, int retcode, String currentJob, int threadNum, int Q, String location,int jobID){
 			synchronized(zkc){
-				if(retcode==0){	
+				//if(retcode==0){	
 						String WorkerJobPath = JOBS_PATH+"/worker-"+Workerid;	
 						System.out.println("finish executing jobs....."+WorkerJobPath+"/"+currentJob);
 						zkc.delete(WorkerJobPath+"/"+currentJob,-1);
-				}
+				//}
 										
 				checkMap.remove(currentJob);
 				//TODO:assume now updating result to RESULT_PATH directory
@@ -233,13 +233,14 @@ public class Worker{	//worker node, need to know hardware configurations
 	        ResultWatcher = new Watcher(){
 				@Override
 	             public void process(WatchedEvent event) {
-	             switch (event.getType()){
-					case NodeChildrenChanged:
-	                 		Result_Watch();
+	             int retcode=0;
 
-	             	}
-	             
-	             zkc.getChildren(RESULT_PATH, ResultWatcher);
+	             retcode =Result_Watch();
+
+	             if(retcode == 0)
+					zkc.getChildren(RESULT_PATH, ResultWatcher);
+				else
+					zkc.getData(RESULT_PATH+"/"+JobName,ResultWatcher,null);
 	             }
 	        };
 			//=======================================================================================================================================
@@ -278,7 +279,7 @@ public class Worker{	//worker node, need to know hardware configurations
        
 	}
 	
-	public void Result_Watch(){
+	public int Result_Watch(){
 		try {
 	               System.out.println("inside the ResultWatcher for watching result root");
 	                 				
@@ -288,6 +289,7 @@ public class Worker{	//worker node, need to know hardware configurations
 		         			String ResultChildrenPath= RESULT_PATH+"/"+JobName;
 							Stat stat = zkc.exists(ResultChildrenPath, null);	
 							Jobinfo = zkc.getData(ResultChildrenPath, null, stat);
+							
 						}
 						if(Jobinfo !=null){
 							String[] tokens = Jobinfo.split(":");
@@ -298,17 +300,20 @@ public class Worker{	//worker node, need to know hardware configurations
 							if(tokens[1].equalsIgnoreCase("ACTIVE"))
 								CurrentState= "ACTIVE";
 								//zkc.getChildren(RESULT_PATH+"/"+this.JobName, ResultChildrenWatcher);
-							else if(tokens[1].equalsIgnoreCase("KILL")){
-								CurrentState= "KILL";
+							else if(tokens[1].equalsIgnoreCase("KILLED")){
+								System.out.println("Kill request, ready to exit ;)");
+								CurrentState= "KILLED";
 								System.exit(-1);		//scheduler ask to kill myself now
 							}
+							return 1;
 						}
 					
 
          		}
          		catch(Exception e) {
                     e.printStackTrace();
-                }		
+                }	
+                return 0;	
 	
 	}
 	
@@ -340,7 +345,7 @@ public class Worker{	//worker node, need to know hardware configurations
 				
 				for(index=0;index<this.max_executions;index++){
 					System.out.println("creating workerObjects");
-					zkc.create(										//create free worker object
+					zkc.create(					 				//create free worker object
 			                FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+index,       // Path
 			                info,   // information
 			                CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
@@ -360,8 +365,11 @@ public class Worker{	//worker node, need to know hardware configurations
 		        /*watch worker, ready to work*/
 				zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
 				/*watch result, wait to get Job*/
-				Result_Watch();
-				zkc.getChildren(RESULT_PATH, ResultWatcher);
+				int retcode = Result_Watch();
+				if(retcode == 0)
+					zkc.getChildren(RESULT_PATH, ResultWatcher);
+				else
+					zkc.getData(RESULT_PATH+"/"+JobName,ResultWatcher,null);
 
 
 				

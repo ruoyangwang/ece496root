@@ -50,6 +50,7 @@ public class WorkerObject {
 
 	
 	public int Node_power(String filename){
+		
 		try{
 			File f = new File("../NPAIRS/init_NPAIRS.sh");
 			if(!f.exists() || f.isDirectory()){
