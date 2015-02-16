@@ -31,15 +31,15 @@ class ScheduleAlgo {
 				JobObject j = null;
 				if (jobListCopy.size()>0) {
 					try {	
-						jobListCopy.remove(0);
+						j=jobListCopy.remove(0);
 					} catch (Exception e) {;}
- 				}
+ 				} else {
+					// list empty
+					break;
+				}
 				if (j != null) {
 					Queue<JobObject> q = scheduledJobs.get(workerName);
 					q.add(j);
-				} else {
-					// list is empty
-					break;
 				}
 			}
 		}
