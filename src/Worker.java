@@ -255,8 +255,11 @@ public class Worker{	//worker node, need to know hardware configurations
 	                 			synchronized(zkc){
 			             			String ResultChildrenPath= RESULT_PATH+"/"+JobName;
 									List<String> children=zkc.getChildren(ResultChildrenPath);
-									if(children.size()==Qcount)	//all jobs are done
-										System.exit(-1);		//can kill myself now
+									if(children.size()==Qcount){
+										System.out.println("all job done, quitting myself");
+										System.exit(-1);	
+									}	//all jobs are done
+											//can kill myself now
 								}
 
 	                 		}
