@@ -84,9 +84,10 @@ public class WorkerObject {
 
 				/*now run benchmark*/
 				if(retcode == 0){
-					command = "sh ../NPAIRS/bin/npairs_multiProc_benchmark.sh";
-					p = Runtime.getRuntime().exec(command);
-					p.waitFor();
+					System.out.println("start to run Benchmark...");
+					/*String command2 = "sh ../NPAIRS/bin/npairs_multiProc_benchmark.sh";
+					p = Runtime.getRuntime().exec(command2);
+					p.waitFor();*/
 					f = new File("../NPAIRS/log/maxJobs.info");
 					if(f.exists()){
 						BufferedReader fbr = new BufferedReader(new FileReader(f));
@@ -95,6 +96,7 @@ public class WorkerObject {
 					}
 				}
 			}
+			System.out.println("error occurs return 1 freeWorker");
 			return 1;
 		
 		}catch (Exception e) {

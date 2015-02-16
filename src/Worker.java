@@ -343,6 +343,18 @@ public class Worker{	//worker node, need to know hardware configurations
 				String info = wk.toNodeDataString();
 				System.out.println(info);
 				
+
+				/*watch worker, ready to work*/
+				zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
+				
+				this.executor = Executors.newCachedThreadPool();
+				
+				zkc.setData(											//set data for worker
+		                    WORKER_PATH+"/"+"worker-"+Workerid,       // Path
+		                    info,  // information
+							-1
+		                    );
+
 				for(index=0;index<this.max_executions;index++){
 					System.out.println("creating workerObjects");
 					zkc.create(					 				//create free worker object
@@ -353,17 +365,9 @@ public class Worker{	//worker node, need to know hardware configurations
 
 				}
 				
-				this.executor = Executors.newCachedThreadPool();
-				
-				zkc.setData(											//set data for worker
-		                    WORKER_PATH+"/"+"worker-"+Workerid,       // Path
-		                    info,  // information
-							-1
-		                    );
 
 		                    
-		        /*watch worker, ready to work*/
-				zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
+		        
 				/*watch result, wait to get Job*/
 				int retcode = Result_Watch();
 				if(retcode == 0)
