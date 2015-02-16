@@ -267,8 +267,6 @@ public class JobTracker {
 		}
 
 		// remove jobs in job pool.
-		// for now dont remove jobs from jobpool
-		/*
 		String jp = JOBPOOL_PATH + "/" + jobId;
 	    stat = zkc.exists(jp, null);
 		if (stat != null) {
@@ -276,8 +274,8 @@ public class JobTracker {
 			for (String jobName: children) {
 				zkc.delete(jp + "/" + jobName, -1);
 			}
+			signalWorkReassigned();
 		}
-		*/
 	}
 
 
@@ -503,7 +501,7 @@ public class JobTracker {
 		}
 	}
 	
-	private void signalWorkReassigned() {
+	private static void signalWorkReassigned() {
 		// signal work reassigned by changing the jobpool data. 
 		// scheduler will pick up the change in data
     	Stat stat = null;
