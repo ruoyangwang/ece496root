@@ -267,6 +267,8 @@ public class JobTracker {
 		}
 
 		// remove jobs in job pool.
+		// for now dont remove jobs from jobpool
+		/*
 		String jp = JOBPOOL_PATH + "/" + jobId;
 	    stat = zkc.exists(jp, null);
 		if (stat != null) {
@@ -275,11 +277,15 @@ public class JobTracker {
 				zkc.delete(jp + "/" + jobName, -1);
 			}
 		}
+		*/
 	}
 
 
 
 	private static void removeJobpoolJobID(String jobId) {
+		return;
+		// for now dont remove jobs from jobpool
+		/*
 		String p = JOBPOOL_PATH + "/" + jobId;
 		Stat stat = zkc.exists(p, null);
 		if (stat != null) {
@@ -289,7 +295,7 @@ public class JobTracker {
 			} else {
 				System.out.println("ERROR: Attempting to delete jobpool ID with job pending");
 			}
-		}
+		}*/
 	}
 	
 	// returns the job running or null if none
