@@ -28,7 +28,12 @@ class ScheduleAlgo {
 			for(WorkerObject wo: workersList) {
 				String workerName = wo.getNodeName();
 				// remove the first job from list				
-				JobObject j = jobListCopy.remove(0);
+				JobObject j = null;
+				if (jobListCopy.size()>0) {
+					try {	
+						jobListCopy.remove(0);
+					} catch (Exception e) {;}
+ 				}
 				if (j != null) {
 					Queue<JobObject> q = scheduledJobs.get(workerName);
 					q.add(j);
