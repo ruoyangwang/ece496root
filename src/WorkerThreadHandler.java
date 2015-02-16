@@ -29,7 +29,7 @@ public class WorkerThreadHandler implements Runnable {
 							                	 	
 					long endTime = System.nanoTime();	                            		
 					long executionTime = (endTime - startTime);
-					Worker.Thread_complete(executionTime, retcode, this.currentJob, this.threadNumber, this.Qvalue, this.inputLocation, this.jobID);
+					Worker.Thread_complete(executionTime, retcode, this.currentJob, this.threadNumber, this.Qvalue, this.inputName, this.jobID);
 		}
 		
 		public void setVal(String input, int val, String currentJob, int jobid){
