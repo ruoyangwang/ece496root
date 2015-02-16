@@ -195,7 +195,7 @@ public class Worker{	//worker node, need to know hardware configurations
 												int jobID =jo.jobId;
 							                		String inputLocation= jo.inputFile;
 							                		WorkerThreadHandler t = new WorkerThreadHandler();
-							                		t.setVal(inputLocation, Qvalue, currentJob, jobID);
+							                		t.setVal(inputName, Qvalue, currentJob, jobID);
 					                    			checkMap.put(currentJob,t);
 					                 			/*synchronized counter incrementation*/
 					                    			iterator_increment();

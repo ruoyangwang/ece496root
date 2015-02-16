@@ -4,11 +4,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 public class WorkerThreadHandler implements Runnable {
-		String inputLocation;
+		String inputName;
 		String currentJob;
 		static private int threadNumber=0;
 		int Qvalue;
 		int jobID;
+
 		@Override
 		public void run() {
 				long startTime = System.nanoTime();
@@ -17,7 +18,7 @@ public class WorkerThreadHandler implements Runnable {
 													//mock of execution, depends on where we put zookeeper and NPAIRS executables we can change shell command 
 					System.out.println("executing jobs.....");
 					//String command = "sh ../execute/execute.sh " + this.inputLocation+" "+ this.Qvalue;	
-					String command = "sh ../NPAIRS/bin/run_npairs.sh "+	this.Qvalue;
+					String command = "cd ../NPAIRS/data/"+this.inputName +" && sh run_npairs.sh "+ this.Qvalue;
 					Process p = Runtime.getRuntime().exec(command);
 					retcode=p.waitFor();
 									
@@ -32,7 +33,7 @@ public class WorkerThreadHandler implements Runnable {
 		}
 		
 		public void setVal(String input, int val, String currentJob, int jobid){
-			this.inputLocation = input;
+			this.inputName = input;
 			this.Qvalue = val;
 			this.currentJob = currentJob;
 			this.threadNumber+=1;
