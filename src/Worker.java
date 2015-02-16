@@ -99,7 +99,7 @@ public class Worker{	//worker node, need to know hardware configurations
 		System.out.println( args[0]);
 		Worker wker = new Worker(args[0],WorkerServerInfo);
 		wker.createPersistentFolders();
-		wker.Building(args[0]);
+		wker.Building(args[1]);
 		
 		System.out.println("Sleeping...");
 		while (true) {
@@ -337,6 +337,7 @@ public class Worker{	//worker node, need to know hardware configurations
 				Create_WorkerObj(Workerid);
 				
 				this.max_executions= wk.Node_power(inputName);
+				System.out.println("node power is #:  "+this.max_executions);
 				if(this.max_executions ==-1)
 					this.max_executions=1;
 				wk.setHostName(this.hostname);

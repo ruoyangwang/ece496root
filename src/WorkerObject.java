@@ -90,6 +90,7 @@ public class WorkerObject {
 					p.waitFor();*/
 					f = new File("../NPAIRS/log/maxJobs.info");
 					if(f.exists()){
+						System.out.println("found the maxJobs file, read the number");
 						BufferedReader fbr = new BufferedReader(new FileReader(f));
 						this.maxJobNum= Integer.parseInt(fbr.readLine());
 						return Integer.parseInt(fbr.readLine());
