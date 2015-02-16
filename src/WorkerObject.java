@@ -93,7 +93,7 @@ public class WorkerObject {
 						System.out.println("found the maxJobs file, read the number");
 						BufferedReader fbr = new BufferedReader(new FileReader(f));
 						this.maxJobNum= Integer.parseInt(fbr.readLine());
-						return Integer.parseInt(fbr.readLine());
+						return this.maxJobNum;
 					}
 				}
 			}
