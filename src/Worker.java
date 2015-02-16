@@ -49,6 +49,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	static int index=0;
 	static int max_executions=0;
 	static int iterator=0;
+	static int Qcount = 0;
 	static WorkerThreadHandler worker_t[];
     final static String JOB_TRACKER_PATH = "/jobTracker";
 	final static String WORKER_PATH = "/worker";
@@ -57,9 +58,16 @@ public class Worker{	//worker node, need to know hardware configurations
 	final static String SEQ_PATH = "/seq";
 	final static String JOBPOOL_PATH = "/jobpool";
 	final static String FREE_WORKERS_PATH = "/freeWorkers";
+
+	static String CurrentState;
+	static String inputName;
+	static String JobName;
 	ExecutorService executor;
-	//Watcher fsWatcher;
-	Watcher WorkerWatcher;
+	/*watchers for worker and results*/
+	static Watcher WorkerWatcher;
+	static Watcher ResultWatcher;
+	static Watcher ResultChildWatcher;
+	
 	static String Workerid=null;			//workerid of this node(worker)
 	String Workerpath=null;
 	
@@ -67,7 +75,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	long executionTime = 0;
 	
 	public static void main(String[] args) throws IOException, KeeperException, InterruptedException, NumberFormatException, ClassNotFoundException {
-		if (args.length != 1) {
+		if (args.length != 3) {
             System.out.println("Usage: java -classpath lib/zookeeper-3.3.2.jar:lib/log4j-1.2.15.jar:. Worker zkServer:zkPort");
             return;
         }
@@ -75,6 +83,11 @@ public class Worker{	//worker node, need to know hardware configurations
 		List<String> jobs = null, tasks = null; 
 		String myHostName;
 		String WorkerServerInfo;
+		
+		/*get input file name for benchmark*/
+		inputName = args[1];
+		JobName = args[2];
+		
 		try{
 			myHostName = InetAddress.getLocalHost().getHostName();
 		}catch (Exception e){
@@ -84,9 +97,10 @@ public class Worker{	//worker node, need to know hardware configurations
 		}		
 		WorkerServerInfo = myHostName;
 		System.out.println( args[0]);
-		Worker wk = new Worker(args[0],WorkerServerInfo);
-		wk.createPersistentFolders();
-		wk.Building();
+		Worker wker = new Worker(args[0],WorkerServerInfo);
+		wker.createPersistentFolders();
+		wker.Building(args[0]);
+		
 		System.out.println("Sleeping...");
 		while (true) {
 		    try{ Thread.sleep(5000); } catch (Exception e) {}
@@ -96,32 +110,42 @@ public class Worker{	//worker node, need to know hardware configurations
 	 
 	public static void Thread_complete(long execution, int retcode, String currentJob, int threadNum, int Q, String location,int jobID){
 			synchronized(zkc){
-				if(retcode==0){	
+				//if(retcode==0){	
 						String WorkerJobPath = JOBS_PATH+"/worker-"+Workerid;	
 						System.out.println("finish executing jobs....."+WorkerJobPath+"/"+currentJob);
 						zkc.delete(WorkerJobPath+"/"+currentJob,-1);
-				}
+				//}
 										
 				checkMap.remove(currentJob);
 				//TODO:assume now updating result to RESULT_PATH directory
 				System.out.println("finish deleting, ready to move on");
 				//Update_WorkerObj();	//delimited string   wkid:cpucoreNumber:jobspeed
+				wk.executionTime = execution;
 				String wkInfo = wk.toNodeDataString();
 				ResultObject RO = new ResultObject(hostname, location, execution, jobID, Q);
 				String resultInfo = RO.toNodeDataString();
 				index+=1;
-
+				/*count -1 */
+				iterator_decrement();
+				
 				zkc.create(										//create free worker object
 						FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+index,       // Path
 						wkInfo,   // information
 						CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
 				);
+				
 				System.out.println(jobID+"        " +resultInfo);
+
+				
 				zkc.create(
 						RESULT_PATH+"/"+jobID+"/"+RO.get_Result_Node_Name(),
 						resultInfo,
-						CreateMode.EPHEMERAL
+						CreateMode.PERSISTENT
 				);
+
+				if(iterator == 0){			//if all worker are completed (Free)
+					zkc.getChildren(RESULT_PATH+"/"+JobName, ResultChildWatcher);
+				}
 			}	
 	}
 	
@@ -137,7 +161,8 @@ public class Worker{	//worker node, need to know hardware configurations
 				zkc.getZooKeeper().create("/worker", null, ZkConnector.acl, CreateMode.PERSISTENT);
 				System.out.println("/worker created");
 			}
-			 
+			
+			//------------------------------------------------Worker Watcher construction----------------------------------------------------------
 			WorkerWatcher = new Watcher(){
 	        	 @Override
 	             public void process(WatchedEvent event) {
@@ -150,12 +175,11 @@ public class Worker{	//worker node, need to know hardware configurations
 	                 String currentJob="dummy";
 	                 String taskinfo=null;
 	                 int retcode;
-					 System.out.println("getting jobs");
+					 System.out.println("waiting for jobs");
 	                 switch (event.getType()){
 	                 	case NodeChildrenChanged:
 	                 		try {
-			             			synchronized(zkc){
-										iterator+=1;
+			             			synchronized(zkc){										
 					                    //if (path.equals(Workerpath)){
 					                    	Stat stat = zkc.exists(WorkerJobPath, null);
 
@@ -173,6 +197,9 @@ public class Worker{	//worker node, need to know hardware configurations
 							                		WorkerThreadHandler t = new WorkerThreadHandler();
 							                		t.setVal(inputLocation, Qvalue, currentJob, jobID);
 					                    			checkMap.put(currentJob,t);
+					                 			/*synchronized counter incrementation*/
+					                    			iterator_increment();
+					                    			
 					                    		}
 					                    	}
 					                    	
@@ -183,12 +210,8 @@ public class Worker{	//worker node, need to know hardware configurations
 							                
 											//add Future to the list, we can get return value using Future
 											System.out.println("waiting or no");
-											/*while(iterator<8){
-												System.out.println("waiting for all threads coming");
-												Thread.sleep(120); 
-												
-											}*/
-											//Thread.sleep(2000);			//wait for everyone coming
+
+											/*put all threads into the executor pool and start execution at once*/
 											for (String key: checkMap.keySet()) {
 												
 												executor.submit(checkMap.get(key));
@@ -199,13 +222,54 @@ public class Worker{	//worker node, need to know hardware configurations
 	                        } catch (Exception e) {
 	                            e.printStackTrace();
 	                        }
-	                 	//case NodeDataChanged:
-	                 		//;
 	                 		
 	                 }zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
                     
 	        	 }			
 	        };
+			//=======================================================================================================================================
+	        
+			//------------------------------------------------Result Watcher construction----------------------------------------------------------
+	        ResultWatcher = new Watcher(){
+				@Override
+	             public void process(WatchedEvent event) {
+	             int retcode=0;
+
+	             retcode =Result_Watch();
+
+	             if(retcode == 0)
+					zkc.getChildren(RESULT_PATH, ResultWatcher);
+				else
+					zkc.getData(RESULT_PATH+"/"+JobName,ResultWatcher,null);
+	             }
+	        };
+			//=======================================================================================================================================
+
+			//------------------------------------------------Result Children Watcher construction----------------------------------------------------------
+	        ResultChildWatcher = new Watcher(){
+				@Override
+	             public void process(WatchedEvent event) {
+	             	switch (event.getType()){
+					case NodeChildrenChanged:
+	                 		try {
+	                 			synchronized(zkc){
+			             			String ResultChildrenPath= RESULT_PATH+"/"+JobName;
+									List<String> children=zkc.getChildren(ResultChildrenPath);
+									if(children.size()==Qcount)	//all jobs are done
+										System.exit(-1);		//can kill myself now
+								}
+
+	                 		}
+	                 		catch(Exception e) {
+	                            e.printStackTrace();
+	                        }
+
+	             }
+	             if(iterator ==0 && CurrentState.equalsIgnoreCase("ACTIVE"))			//start watching the children only if all workers are free
+	             	zkc.getChildren(RESULT_PATH+"/"+JobName, ResultChildWatcher);
+	            }
+	        };
+			//=======================================================================================================================================
 			
 			
         } catch(Exception e) {
@@ -214,9 +278,56 @@ public class Worker{	//worker node, need to know hardware configurations
 		
        
 	}
+	
+	public int Result_Watch(){
+		try {
+	               System.out.println("inside the ResultWatcher for watching result root");
+	                 				
+	                 				
+	               String Jobinfo =null;
+			       synchronized(zkc){
+		         			String ResultChildrenPath= RESULT_PATH+"/"+JobName;
+							Stat stat = zkc.exists(ResultChildrenPath, null);	
+							Jobinfo = zkc.getData(ResultChildrenPath, null, stat);
+							
+						}
+						if(Jobinfo !=null){
+							String[] tokens = Jobinfo.split(":");
+							System.out.println("check tokens:  ------ "+tokens[0]+" ---- "+tokens[1]);
+							if(Qcount ==0)
+								Qcount = Integer.parseInt(tokens[0]);
+							
+							if(tokens[1].equalsIgnoreCase("ACTIVE"))
+								CurrentState= "ACTIVE";
+								//zkc.getChildren(RESULT_PATH+"/"+this.JobName, ResultChildrenWatcher);
+							else if(tokens[1].equalsIgnoreCase("KILLED")){
+								System.out.println("Kill request, ready to exit ;)");
+								CurrentState= "KILLED";
+								System.exit(-1);		//scheduler ask to kill myself now
+							}
+							return 1;
+						}
+					
 
+         		}
+         		catch(Exception e) {
+                    e.printStackTrace();
+                }	
+                return 0;	
+	
+	}
+	
+	
+	
+	public synchronized static void iterator_increment(){
+		iterator+=1;
+	}
 
-	public void Building(){
+	public synchronized static void iterator_decrement(){
+		iterator-=1;
+	}
+
+	public void Building(String filename){
 		//create child directory of worker, assign id to that worker
 			try{
 				Workerpath = zkc.getZooKeeper().create(WORKER_PATH+"/"+"worker-", null, ZkConnector.acl, CreateMode.EPHEMERAL_SEQUENTIAL);
@@ -224,18 +335,24 @@ public class Worker{	//worker node, need to know hardware configurations
 				Workerid = temp[1];			//create workerid of this worker
 				get_Host_Name();
 				Create_WorkerObj(Workerid);
+				
+				this.max_executions= wk.Node_power(inputName);
+				if(this.max_executions ==-1)
+					this.max_executions=1;
+				wk.setHostName(this.hostname);
 				String info = wk.toNodeDataString();
 				System.out.println(info);
-				for(index=0;index<wk.Node_power();index++){
+				
+				for(index=0;index<this.max_executions;index++){
 					System.out.println("creating workerObjects");
-					zkc.create(										//create free worker object
+					zkc.create(					 				//create free worker object
 			                FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+index,       // Path
 			                info,   // information
 			                CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
 			     	);
 
 				}
-				this.max_executions= wk.Node_power();
+				
 				this.executor = Executors.newCachedThreadPool();
 				
 				zkc.setData(											//set data for worker
@@ -243,14 +360,25 @@ public class Worker{	//worker node, need to know hardware configurations
 		                    info,  // information
 							-1
 		                    );
-				zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
 
+		                    
+		        /*watch worker, ready to work*/
+				zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
+				/*watch result, wait to get Job*/
+				int retcode = Result_Watch();
+				if(retcode == 0)
+					zkc.getChildren(RESULT_PATH, ResultWatcher);
+				else
+					zkc.getData(RESULT_PATH+"/"+JobName,ResultWatcher,null);
+
+
+				
 				}catch(Exception e) {
             			System.out.println("Building Worker: "+ e.getMessage());
         		}
 		}
 
-
+	
 
 	  private static synchronized void createOnePersistentFolder(String Path, String value){	
 		// create folder

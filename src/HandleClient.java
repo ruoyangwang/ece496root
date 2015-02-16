@@ -7,8 +7,12 @@ public class HandleClient extends Thread{
 	private Socket socket = null;
 	ObjectInputStream fromClient = null;
 	private ObjectOutputStream toClient = null;
-	
-	
+	final static String SSH_SCRIPT = "ssh";
+
+	final static String WORKER_LOCATION = "~/capstone/ece496root/bin";
+	final static String WORKER_START_SCRIPT = "nohup ./worker.sh";	
+
+	List<Process> processList = new ArrayList<Process>();
 	// Constructor
 	public HandleClient(Socket socket) {
 		super("HandleClient");
@@ -16,6 +20,83 @@ public class HandleClient extends Thread{
 		System.out.println("Created a new Thread to handle client");
 
 	}
+
+	private List<String> hostStringToList (String hosts) {
+		List<String> hostList = new ArrayList<String>();
+		for(String host: hosts.split(",")) {
+			hostList.add(host);
+		}
+		return hostList;
+	}
+
+	private String arrayToString(List<String> list) {
+
+		StringBuilder sb = new StringBuilder();
+		for (String l : list) {
+			if (sb.length() == 0) {
+				sb.append(l);
+			} else {
+				sb.append(", ");
+				sb.append(l);
+			}
+
+		}
+
+		return sb.toString();
+	}
+
+
+	private void startWorker(String host, String inputFile, String jobId) {
+		//String workerScript = "cd "+ WORKER_LOCATION +" "+ WORKER_START_SCRIPT + " " + JobTracker.getZookeeperHost() + " " + inputFile + "> worker.log &";
+		//String workerScript = "cd "+ WORKER_LOCATION +" && "+ WORKER_START_SCRIPT + " " + JobTracker.getZookeeperHost() + " " + inputFile + " " + jobId + ">> worker.log &";
+		String command = "";
+		
+		/*if (host.equalsIgnoreCase(new String("localhost"))) {
+			command = workerScript;
+
+		} else {
+			String sshScript = SSH_SCRIPT + " " + host;
+			command = sshScript + " \"" + workerScript + "\"";
+		}*/
+
+		
+
+
+		command = "sh ../execute/startWorkers.sh " + host + " " + JobTracker.getZookeeperHost() + " " + inputFile + " " + jobId;
+		System.out.println("Starting worker on " + host + " with command: " + command);
+		Process p = null;
+		try {
+			p = Runtime.getRuntime().exec(command);
+			//p.waitFor();
+			//sleep(1000);
+		} catch(Exception e) {
+			System.out.println("Exception at startWorker");
+		}
+/*
+		if (p != null) {
+			processList.add(p);
+		}*/
+	}
+
+
+	private void startWorkers(List<String> hosts, String inputFile, String jobId) {
+		for(String host: hosts) {
+			startWorker(host, inputFile, jobId);
+		}		
+	}
+
+	private void destroyWorkerStartingProcesses() {
+		try {
+			sleep(5000);
+		} catch (Exception e) {;}
+		/*
+		System.out.println("Killing worker starting processes");
+		for (Process p: processList) {
+			p.destroy();
+		}
+		processList.clear();*/
+	}
+
 	
 	private String newRequest(String inputFileName, String nValues){
 
@@ -54,7 +135,7 @@ public class HandleClient extends Thread{
 	}
 
 	private int checkResult(String jobId) {
-		return JobTracker.checkResult(jobId);
+		return JobTracker.checkResult(jobId, true);
 	}
 
 	public void run() {
@@ -91,9 +172,25 @@ public class HandleClient extends Thread{
 				
 				String inputFileName = temp[1];
 				String nValues = temp[2];
+				String workers = temp[3];
+				String runningJob = JobTracker.hasRunningJob();
 
-				String jobId = newRequest(inputFileName, nValues);
- 				packetToClient="Tracking ID: " + jobId;
+				if (runningJob != null) {
+					packetToClient="Job " + runningJob + " is not completed.";
+					
+				} else {
+
+					String jobId = newRequest(inputFileName, nValues);
+
+					JobTracker.setCurrentJob(inputFileName, jobId);
+
+					List<String> allWorkers = hostStringToList(workers);
+					List<String> startedWorkers = JobTracker.workersNotStarted(allWorkers);
+					startWorkers(allWorkers, inputFileName, jobId);
+
+					destroyWorkerStartingProcesses();
+	 				packetToClient="Tracking ID: " + jobId;
+				}
 			} else if(temp[0].equalsIgnoreCase(new String("status"))) {
 				System.out.println("A New Request: " + packetFromClient);
 				
@@ -102,12 +199,35 @@ public class HandleClient extends Thread{
 				packetToClient =  "Job ID - " + jobId + ":";
 				if (result == 1) {
 					packetToClient =  packetToClient + " Finished.";
+				} else if (result == 2) {
+					packetToClient =  packetToClient + " Was killed.";
 				} else if (result == 0) {
 					packetToClient =  packetToClient + " Not Finished.";
 				} else {
 					packetToClient =  packetToClient + " Error occured. Please see log";
 				}
+			} else if(temp[0].equalsIgnoreCase(new String("kill"))) {
+				System.out.println("A New Request: " + packetFromClient);
 				
+				String jobId = temp[1];
+				JobTracker.killJob(jobId);
+				packetToClient =  "Job - " + jobId + " killed";
+				
+			} else if (temp[0].equalsIgnoreCase(new String("add"))) {
+				
+				String workers = temp[1];
+				String inputFileName = JobTracker.CurrentJobFile;
+				String jobId = JobTracker.CurrentJobId;
+
+				List<String> allWorkers = hostStringToList(workers);
+
+				List<String> startedWorkers = JobTracker.workersNotStarted(allWorkers);
+
+				startWorkers(allWorkers, inputFileName, jobId);
+
+				destroyWorkerStartingProcesses();
+				packetToClient="Hosts " + arrayToString(allWorkers) + " added to computation cluster.\n" + arrayToString(startedWorkers) + " were already started.";
+
 			} else {
 				System.out.println("Unknown Request");
 

@@ -75,13 +75,17 @@ public class Client {
 		String q = "q";
 		String run = "run";
 		String status = "status";
+		String addHost = "add";
+		String kill = "kill";
 
 		while(true){
 			System.out.println("");
 			System.out.println("Enter:");
-			System.out.println("\"run\" followed by an input file and Q values to start a new job");
-			System.out.println("ex: \"run inputfile.txt 1-3,5\" would run npairs with inputfile,txt with Q values 1,2,3,5");
+			System.out.println("\"run\" followed by an input file, Q values and hosts to start a new job");
+			System.out.println("ex: \"run inputfile.txt 1-3,5 c123,c124,c125\" would run npairs with inputfile,txt with Q values 1,2,3,5 on machiens c123 c124 and c125");
+			System.out.println("\"add\" followed by hosts to add more machies to the computation");
 			System.out.println("\"status\" follow by tracking ID to get status for the job");
+			System.out.println("\"kill\" follow by tracking ID to get kill the job");
 			System.out.println("\"q\" to quit");
 			System.out.println("");
 
@@ -98,12 +102,17 @@ public class Client {
 			
 				String inputFile = null;
 				String qValues = null;
+				String hosts = null;
 					
-				if (commandComponents.size() >= 3) {
+				if (commandComponents.size() >= 4) {
+					inputFile = commandComponents.get(1);
+					qValues = commandComponents.get(2);
+					hosts = commandComponents.get(3);
+				} else if (commandComponents.size() == 3) {
 					inputFile = commandComponents.get(1);
 					qValues = commandComponents.get(2);
 				} else if (commandComponents.size() == 2) {
-					inputFile = commandComponents.get(1);
+					inputFile = commandComponents.get(1);				
 				}
 
 				if (inputFile == null) {
@@ -115,8 +124,13 @@ public class Client {
 					System.out.println("Enter Q values");
 					qValues = in.nextLine().trim();
 				}
+
+				if (hosts == null) {
+					System.out.println("Enter hosts(comma separated)");
+					hosts = in.nextLine().trim();
+				}
 	
-				Request = "run:" + inputFile + ":" + qValues;
+				Request = "run:" + inputFile + ":" + qValues + ":" +hosts;
 
 			}else if (status.equalsIgnoreCase(type)) {
 				String jobId = null;
@@ -132,13 +146,40 @@ public class Client {
 	
 				Request = "status:" + jobId;
 
+			}else if (kill.equalsIgnoreCase(type)) {
+				String jobId = null;
+					
+				if (commandComponents.size() >= 2) {
+					jobId = commandComponents.get(1);
+				}
+
+				if (jobId == null) {
+					System.out.println("Enter Job ID");
+					jobId = in.nextLine().trim();
+				}
+	
+				Request = "kill:" + jobId;
+
 			}else if(q.equalsIgnoreCase(type)){
 
 				System.out.println("Quitting");
 				// quit
 				return;
 
-			}else{
+			}else if (addHost.equalsIgnoreCase(type)) {
+				// addHost
+
+				String hosts = null;
+				if (commandComponents.size() == 2) {
+					hosts = commandComponents.get(1);				
+				}
+
+				if (hosts == null) {
+					System.out.println("Enter hosts(comma separated)");
+					hosts = in.nextLine().trim();
+				}
+				Request = "add:" + hosts;
+			} else {
 				System.out.println("Unknown request");
 				continue;
 			}

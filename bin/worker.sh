@@ -13,4 +13,4 @@ fi
 
 #echo "CLASSPATH=$CLASSPATH"
 
-"$JAVA" -cp ../src:"$CLASSPATH" Worker $1:2181
+"$JAVA" -cp ../src:"$CLASSPATH" Worker $1:2181 $2 $3
