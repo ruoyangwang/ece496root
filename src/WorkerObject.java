@@ -77,15 +77,22 @@ public class WorkerObject {
 			}
 			else{
 				System.out.println("start to execute init_NPAIRS script.......");
-				String command = "sh ../NPAIRS/init_NPAIRS.sh "+filename;				
+				String command = "sh ../NPAIRS/init_NPAIRS.sh "+filename;	
+				/*initialized script*/			
 				Process p = Runtime.getRuntime().exec(command);
 				int retcode = p.waitFor();
-				Thread.sleep(2000);	//wait for sometime to let maxJobs.info to be generated
-				f = new File("../NPAIRS/log/maxJobs.info");
-				if(f.exists()){
-					BufferedReader fbr = new BufferedReader(new FileReader(f));
-					this.maxJobNum= Integer.parseInt(fbr.readLine());
-					return Integer.parseInt(fbr.readLine());
+
+				/*now run benchmark*/
+				if(retcode == 0){
+					command = "sh ../NPAIRS/bin/npairs_multiProc_benchmark.sh";
+					p = Runtime.getRuntime().exec(command);
+					p.waitFor();
+					f = new File("../NPAIRS/log/maxJobs.info");
+					if(f.exists()){
+						BufferedReader fbr = new BufferedReader(new FileReader(f));
+						this.maxJobNum= Integer.parseInt(fbr.readLine());
+						return Integer.parseInt(fbr.readLine());
+					}
 				}
 			}
 			return 1;

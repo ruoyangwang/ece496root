@@ -61,8 +61,8 @@ echo "Free free to terminate ctr-c"
 cd data/$DATA_FILE
 ln -s ../../bin/* .
 
-echo "Ran NPAIRS multiProc benchmark"
-./npairs_multiProc_benchmark.sh
-cd -
+#echo "Ran NPAIRS multiProc benchmark"
+#./npairs_multiProc_benchmark.sh
+#cd -
 
 exit 0
