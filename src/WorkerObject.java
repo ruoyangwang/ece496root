@@ -1,3 +1,4 @@
+
 import java.util.*;
 import java.net.*;
 import java.io.*;
@@ -79,6 +80,7 @@ public class WorkerObject {
 				String command = "sh ../NPAIRS/init_NPAIRS.sh "+filename;				
 				Process p = Runtime.getRuntime().exec(command);
 				int retcode = p.waitFor();
+				Thread.sleep(2000);	//wait for sometime to let maxJobs.info to be generated
 				f = new File("../NPAIRS/log/maxJobs.info");
 				if(f.exists()){
 					BufferedReader fbr = new BufferedReader(new FileReader(f));
@@ -115,3 +117,4 @@ public class WorkerObject {
 	}
 
 }
+
