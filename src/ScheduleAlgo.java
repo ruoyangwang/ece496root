@@ -32,7 +32,9 @@ class ScheduleAlgo {
 				if (jobListCopy.size()>0) {
 					try {	
 						j=jobListCopy.remove(0);
-					} catch (Exception e) {;}
+					} catch (Exception e) {
+						j=null;
+					}
  				} else {
 					// list empty
 					break;
