@@ -51,7 +51,7 @@ public class WorkerObject {
 
 	
 	public int Node_power(String filename){
-		
+		System.out.println("check NodePower, filename is:   ----   "+filename);
 		try{
 			File f = new File("../NPAIRS/init_NPAIRS.sh");
 			if(!f.exists() || f.isDirectory()){
