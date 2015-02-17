@@ -1,6 +1,8 @@
 
 #!/bin/bash
-echo "start"
-sleep 50
-echo "done"
+cd ../NPAIRS/data/$1
+sleep 1
+sh run_npairs.sh $2
+wait
+return 0
 

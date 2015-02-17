@@ -9,7 +9,7 @@ public class test{
 	String cpucore;
 	public String memFree;
 	String DELIMITER=":";
-
+	String inputName = "test";
 	public static void main(String[] args ){
 		test wk = new test();
 		/*wk.cpucore = wk.addToFreeWorker();
@@ -22,13 +22,35 @@ public class test{
 		wk.executionTime=Long.valueOf(tokens[2]).longValue() ;
 		System.out.println(wk.workerName);
 		System.out.println(wk.executionTime);*/
-		System.out.println(wk.Node_power());
+		//System.out.println(wk.Node_power());
+		System.out.println(wk.run_stuff());
 	}
 	
 
 	public test(){
 		this.workerName= "test 1";
 		this.cpucore=null;
+	}
+	
+	public String run_stuff(){
+		try{
+		System.out.println("executing jobs.....");
+					//String command = "sh ../execute/execute.sh " + this.inputLocation+" "+ this.Qvalue;	
+			String command ="sh ../execute/execute.sh";
+			Process p = Runtime.getRuntime().exec(command);
+			int retcode=p.waitFor();
+			//command = "sh execute.sh";
+			//p = Runtime.getRuntime().exec(command);
+			//p.waitFor();
+			System.out.println("check return code:   "+retcode);
+			BufferedReader br = 
+                            new BufferedReader(new InputStreamReader(p.getInputStream()));
+			return br.readLine();
+		}catch(Exception e) {
+            e.printStackTrace();
+		}
+		System.out.println("exception occurs?");
+		return null;
 	}
 
 	public String addToFreeWorker(){

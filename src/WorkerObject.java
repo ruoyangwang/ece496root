@@ -32,6 +32,12 @@ public class WorkerObject {
 		return workerName;
 	}
 
+	public void setNodeName(String wkname){
+		this.workerName = wkname;
+
+
+	}
+
 	public int get_MaxJobNum(){
 
 		return this.maxJobNum;
@@ -51,7 +57,7 @@ public class WorkerObject {
 
 	
 	public int Node_power(String filename){
-		
+		System.out.println("check NodePower, filename is:   ----   "+filename);
 		try{
 			File f = new File("../NPAIRS/init_NPAIRS.sh");
 			if(!f.exists() || f.isDirectory()){
@@ -84,17 +90,20 @@ public class WorkerObject {
 
 				/*now run benchmark*/
 				if(retcode == 0){
-					command = "sh ../NPAIRS/bin/npairs_multiProc_benchmark.sh";
-					p = Runtime.getRuntime().exec(command);
-					p.waitFor();
+					System.out.println("start to run Benchmark...");
+					/*String command2 = "sh ../NPAIRS/bin/npairs_multiProc_benchmark.sh";
+					p = Runtime.getRuntime().exec(command2);
+					p.waitFor();*/
 					f = new File("../NPAIRS/log/maxJobs.info");
 					if(f.exists()){
+						System.out.println("found the maxJobs file, read the number");
 						BufferedReader fbr = new BufferedReader(new FileReader(f));
 						this.maxJobNum= Integer.parseInt(fbr.readLine());
-						return Integer.parseInt(fbr.readLine());
+						return this.maxJobNum;
 					}
 				}
 			}
+			System.out.println("error occurs return 1 freeWorker");
 			return 1;
 		
 		}catch (Exception e) {

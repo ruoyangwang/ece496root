@@ -72,7 +72,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	String Workerpath=null;
 	
 	long benchmarkTime = 0;
-	long executionTime = 0;
+	static long executionTime = 0;
 	
 	public static void main(String[] args) throws IOException, KeeperException, InterruptedException, NumberFormatException, ClassNotFoundException {
 		if (args.length != 3) {
@@ -97,9 +97,13 @@ public class Worker{	//worker node, need to know hardware configurations
 		}		
 		WorkerServerInfo = myHostName;
 		System.out.println( args[0]);
+
+		Create_WorkerObj(Workerid);				
+		max_executions= wk.Node_power(inputName);
+
 		Worker wker = new Worker(args[0],WorkerServerInfo);
 		wker.createPersistentFolders();
-		wker.Building(args[0]);
+		wker.Building(args[1]);
 		
 		System.out.println("Sleeping...");
 		while (true) {
@@ -195,7 +199,7 @@ public class Worker{	//worker node, need to know hardware configurations
 												int jobID =jo.jobId;
 							                		String inputLocation= jo.inputFile;
 							                		WorkerThreadHandler t = new WorkerThreadHandler();
-							                		t.setVal(inputLocation, Qvalue, currentJob, jobID);
+							                		t.setVal(inputName, Qvalue, currentJob, jobID);
 					                    			checkMap.put(currentJob,t);
 					                 			/*synchronized counter incrementation*/
 					                    			iterator_increment();
@@ -255,8 +259,11 @@ public class Worker{	//worker node, need to know hardware configurations
 	                 			synchronized(zkc){
 			             			String ResultChildrenPath= RESULT_PATH+"/"+JobName;
 									List<String> children=zkc.getChildren(ResultChildrenPath);
-									if(children.size()==Qcount)	//all jobs are done
-										System.exit(-1);		//can kill myself now
+									if(children.size()==Qcount){
+										System.out.println("all job done, quitting myself");
+										System.exit(-1);	
+									}	//all jobs are done
+											//can kill myself now
 								}
 
 	                 		}
@@ -297,11 +304,19 @@ public class Worker{	//worker node, need to know hardware configurations
 							if(Qcount ==0)
 								Qcount = Integer.parseInt(tokens[0]);
 							
-							if(tokens[1].equalsIgnoreCase("ACTIVE"))
+							if(tokens[1].equalsIgnoreCase("ACTIVE")){
+
 								CurrentState= "ACTIVE";
 								//zkc.getChildren(RESULT_PATH+"/"+this.JobName, ResultChildrenWatcher);
-							else if(tokens[1].equalsIgnoreCase("KILLED")){
-								System.out.println("Kill request, ready to exit ;)");
+								String ResultChildrenPath= RESULT_PATH+"/"+JobName;
+									List<String> children=zkc.getChildren(ResultChildrenPath);
+									if(children.size()==Qcount){
+										System.out.println("all job done, quitting myself");
+										System.exit(-1);	
+									}	//all jobs are done
+							}
+							else if(tokens[1].equalsIgnoreCase("KILLED")||tokens[1].equalsIgnoreCase("COMPLETED")){
+								System.out.println("Kill or completed request, ready to exit ;)");
 								CurrentState= "KILLED";
 								System.exit(-1);		//scheduler ask to kill myself now
 							}
@@ -333,25 +348,20 @@ public class Worker{	//worker node, need to know hardware configurations
 				Workerpath = zkc.getZooKeeper().create(WORKER_PATH+"/"+"worker-", null, ZkConnector.acl, CreateMode.EPHEMERAL_SEQUENTIAL);
 				String[] temp = Workerpath.split("-");
 				Workerid = temp[1];			//create workerid of this worker
+				System.out.println("print node id:   "+Workerid);
+				wk.setNodeName("worker-"+Workerid);
 				get_Host_Name();
-				Create_WorkerObj(Workerid);
 				
-				this.max_executions= wk.Node_power(inputName);
-				if(this.max_executions ==-1)
-					this.max_executions=1;
+				System.out.println("node power is #:  "+max_executions);
+				if(max_executions ==-1)
+					max_executions=1;
 				wk.setHostName(this.hostname);
 				String info = wk.toNodeDataString();
 				System.out.println(info);
 				
-				for(index=0;index<this.max_executions;index++){
-					System.out.println("creating workerObjects");
-					zkc.create(					 				//create free worker object
-			                FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+index,       // Path
-			                info,   // information
-			                CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
-			     	);
 
-				}
+				/*watch worker, ready to work*/
+				zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
 				
 				this.executor = Executors.newCachedThreadPool();
 				
@@ -361,9 +371,19 @@ public class Worker{	//worker node, need to know hardware configurations
 							-1
 		                    );
 
+				for(index=0;index<max_executions;index++){
+					System.out.println("creating workerObjects");
+					zkc.create(					 				//create free worker object
+			                FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+index,       // Path
+			                info,   // information
+			                CreateMode.EPHEMERAL  	// Znode type, set to EPHEMERAL.
+			     	);
+
+				}
+				
+
 		                    
-		        /*watch worker, ready to work*/
-				zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
+		        
 				/*watch result, wait to get Job*/
 				int retcode = Result_Watch();
 				if(retcode == 0)
@@ -432,13 +452,13 @@ public class Worker{	//worker node, need to know hardware configurations
 	}
 
 
-	public void Update_WorkerObj(){
+	public static void Update_WorkerObj(){
 		try{
 			Process p = Runtime.getRuntime().exec("sh ../src/cpu_core.sh");
     			p.waitFor();		//create shell object and retrieve cpucore number
 			BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
 			wk.cpucore = br.readLine();
-			wk.executionTime= this.executionTime;
+			wk.executionTime= executionTime;
 			
 		
 		}catch (Exception e) {
@@ -447,7 +467,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	}
 	
 	
-	private void Create_WorkerObj(String wkid){
+	private static void Create_WorkerObj(String wkid){
 			String wkname= "worker-"+wkid;
 			wk= new WorkerObject(wkname);
 			Update_WorkerObj();
