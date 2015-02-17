@@ -36,9 +36,12 @@ public class test{
 		try{
 		System.out.println("executing jobs.....");
 					//String command = "sh ../execute/execute.sh " + this.inputLocation+" "+ this.Qvalue;	
-			String command = "sh ../NPAIRS/data/"+this.inputName +"/execute.sh  > run.log&";
+			String command ="sh ../execute/execute.sh";
 			Process p = Runtime.getRuntime().exec(command);
 			int retcode=p.waitFor();
+			//command = "sh execute.sh";
+			//p = Runtime.getRuntime().exec(command);
+			//p.waitFor();
 			System.out.println("check return code:   "+retcode);
 			BufferedReader br = 
                             new BufferedReader(new InputStreamReader(p.getInputStream()));
