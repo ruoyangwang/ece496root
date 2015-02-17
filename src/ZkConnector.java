@@ -32,7 +32,7 @@ public class ZkConnector implements Watcher {
 
         zooKeeper = new ZooKeeper(
                 hosts, // ZooKeeper service hosts
-                5000,  // Session timeout in milliseconds
+                30000,  // Session timeout in milliseconds
                 this); // watcher - see process method for callbacks
 	    connectedSignal.await();
     }
