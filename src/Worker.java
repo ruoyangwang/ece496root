@@ -72,7 +72,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	String Workerpath=null;
 	
 	long benchmarkTime = 0;
-	long executionTime = 0;
+	static long executionTime = 0;
 	
 	public static void main(String[] args) throws IOException, KeeperException, InterruptedException, NumberFormatException, ClassNotFoundException {
 		if (args.length != 3) {
@@ -97,6 +97,10 @@ public class Worker{	//worker node, need to know hardware configurations
 		}		
 		WorkerServerInfo = myHostName;
 		System.out.println( args[0]);
+
+		Create_WorkerObj(Workerid);				
+		max_executions= wk.Node_power(inputName);
+
 		Worker wker = new Worker(args[0],WorkerServerInfo);
 		wker.createPersistentFolders();
 		wker.Building(args[1]);
@@ -337,12 +341,10 @@ public class Worker{	//worker node, need to know hardware configurations
 				String[] temp = Workerpath.split("-");
 				Workerid = temp[1];			//create workerid of this worker
 				get_Host_Name();
-				Create_WorkerObj(Workerid);
 				
-				this.max_executions= wk.Node_power(inputName);
-				System.out.println("node power is #:  "+this.max_executions);
-				if(this.max_executions ==-1)
-					this.max_executions=1;
+				System.out.println("node power is #:  "+max_executions);
+				if(max_executions ==-1)
+					max_executions=1;
 				wk.setHostName(this.hostname);
 				String info = wk.toNodeDataString();
 				System.out.println(info);
@@ -359,7 +361,7 @@ public class Worker{	//worker node, need to know hardware configurations
 							-1
 		                    );
 
-				for(index=0;index<this.max_executions;index++){
+				for(index=0;index<max_executions;index++){
 					System.out.println("creating workerObjects");
 					zkc.create(					 				//create free worker object
 			                FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+index,       // Path
@@ -440,13 +442,13 @@ public class Worker{	//worker node, need to know hardware configurations
 	}
 
 
-	public void Update_WorkerObj(){
+	public static void Update_WorkerObj(){
 		try{
 			Process p = Runtime.getRuntime().exec("sh ../src/cpu_core.sh");
     			p.waitFor();		//create shell object and retrieve cpucore number
 			BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
 			wk.cpucore = br.readLine();
-			wk.executionTime= this.executionTime;
+			wk.executionTime= executionTime;
 			
 		
 		}catch (Exception e) {
@@ -455,7 +457,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	}
 	
 	
-	private void Create_WorkerObj(String wkid){
+	private static void Create_WorkerObj(String wkid){
 			String wkname= "worker-"+wkid;
 			wk= new WorkerObject(wkname);
 			Update_WorkerObj();
