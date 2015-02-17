@@ -304,11 +304,19 @@ public class Worker{	//worker node, need to know hardware configurations
 							if(Qcount ==0)
 								Qcount = Integer.parseInt(tokens[0]);
 							
-							if(tokens[1].equalsIgnoreCase("ACTIVE"))
+							if(tokens[1].equalsIgnoreCase("ACTIVE")){
+
 								CurrentState= "ACTIVE";
 								//zkc.getChildren(RESULT_PATH+"/"+this.JobName, ResultChildrenWatcher);
-							else if(tokens[1].equalsIgnoreCase("KILLED")){
-								System.out.println("Kill request, ready to exit ;)");
+								String ResultChildrenPath= RESULT_PATH+"/"+JobName;
+									List<String> children=zkc.getChildren(ResultChildrenPath);
+									if(children.size()==Qcount){
+										System.out.println("all job done, quitting myself");
+										System.exit(-1);	
+									}	//all jobs are done
+							}
+							else if(tokens[1].equalsIgnoreCase("KILLED")||tokens[1].equalsIgnoreCase("COMPLETED")){
+								System.out.println("Kill or completed request, ready to exit ;)");
 								CurrentState= "KILLED";
 								System.exit(-1);		//scheduler ask to kill myself now
 							}
