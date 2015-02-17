@@ -18,7 +18,7 @@ public class WorkerThreadHandler implements Runnable {
 													//mock of execution, depends on where we put zookeeper and NPAIRS executables we can change shell command 
 					System.out.println("executing jobs.....");
 					//String command = "sh ../execute/execute.sh " + this.inputLocation+" "+ this.Qvalue;	
-					String command = "cd ../NPAIRS/data/"+this.inputName +" && sh run_npairs.sh "+ this.Qvalue+ " > run.log";
+					String command = "sh ../NPAIRS/data/"+this.inputName +"/run_npairs.sh "+ this.Qvalue;
 					Process p = Runtime.getRuntime().exec(command);
 					retcode=p.waitFor();
 									
