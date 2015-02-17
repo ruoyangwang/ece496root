@@ -340,6 +340,8 @@ public class Worker{	//worker node, need to know hardware configurations
 				Workerpath = zkc.getZooKeeper().create(WORKER_PATH+"/"+"worker-", null, ZkConnector.acl, CreateMode.EPHEMERAL_SEQUENTIAL);
 				String[] temp = Workerpath.split("-");
 				Workerid = temp[1];			//create workerid of this worker
+				System.out.println("print node id:   "+Workerid);
+				wk.setNodeName(Workerid);
 				get_Host_Name();
 				
 				System.out.println("node power is #:  "+max_executions);

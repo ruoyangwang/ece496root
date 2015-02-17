@@ -32,6 +32,12 @@ public class WorkerObject {
 		return workerName;
 	}
 
+	public void setNodeName(String wkname){
+		this.workerName = wkname;
+
+
+	}
+
 	public int get_MaxJobNum(){
 
 		return this.maxJobNum;
