@@ -341,7 +341,7 @@ public class Worker{	//worker node, need to know hardware configurations
 				String[] temp = Workerpath.split("-");
 				Workerid = temp[1];			//create workerid of this worker
 				System.out.println("print node id:   "+Workerid);
-				wk.setNodeName(Workerid);
+				wk.setNodeName("worker-"+Workerid);
 				get_Host_Name();
 				
 				System.out.println("node power is #:  "+max_executions);
