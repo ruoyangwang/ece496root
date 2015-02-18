@@ -115,6 +115,8 @@ public class Worker{	//worker node, need to know hardware configurations
 	public static void Thread_complete(long execution, int retcode, String currentJob, int threadNum, int Q, String location,int jobID){
 			synchronized(zkc){
 				//if(retcode==0){	
+				/*count-1*/
+				iterator_decrement();
 						String WorkerJobPath = JOBS_PATH+"/worker-"+Workerid;	
 						System.out.println("finish executing jobs....."+WorkerJobPath+"/"+currentJob);
 						zkc.delete(WorkerJobPath+"/"+currentJob,-1);
@@ -122,15 +124,14 @@ public class Worker{	//worker node, need to know hardware configurations
 										
 				checkMap.remove(currentJob);
 				//TODO:assume now updating result to RESULT_PATH directory
-				System.out.println("finish deleting, ready to move on");
+				System.out.println("finish deleting, ready to move on ---- "+WorkerJobPath+"/"+currentJob);
 				//Update_WorkerObj();	//delimited string   wkid:cpucoreNumber:jobspeed
 				wk.executionTime = execution;
 				String wkInfo = wk.toNodeDataString();
 				ResultObject RO = new ResultObject(hostname, location, execution, jobID, Q);
 				String resultInfo = RO.toNodeDataString();
 				index+=1;
-				/*count -1 */
-				iterator_decrement();
+
 				
 				zkc.create(										//create free worker object
 						FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+index,       // Path
@@ -146,9 +147,21 @@ public class Worker{	//worker node, need to know hardware configurations
 						resultInfo,
 						CreateMode.PERSISTENT
 				);
-
+				
+				System.out.println("what's the iterator count: ----  "+iterator);
 				if(iterator == 0){			//if all worker are completed (Free)
-					zkc.getChildren(RESULT_PATH+"/"+JobName, ResultChildWatcher);
+					System.out.println("current worker free, set watch for resultChild:  ");
+					String ResultChildrenPath= RESULT_PATH+"/"+JobName;
+					List<String> children=zkc.getChildren(ResultChildrenPath);
+					if(children.size()==Qcount){
+						zkc.setData(											//set data for worker
+						            RESULT_PATH+"/"+JobName,       // Path
+						            Qcount+":COMPLETED",  // information
+									-1
+						           );	
+					}
+					else
+						zkc.getChildren(RESULT_PATH+"/"+JobName, ResultChildWatcher);
 				}
 			}	
 	}
@@ -268,8 +281,11 @@ public class Worker{	//worker node, need to know hardware configurations
 			             			String ResultChildrenPath= RESULT_PATH+"/"+JobName;
 									List<String> children=zkc.getChildren(ResultChildrenPath);
 									if(children.size()==Qcount){
-										System.out.println("all job done, quitting myself");
-										System.exit(-1);	
+											zkc.setData(											//set data for worker
+														RESULT_PATH+"/"+JobName,       // Path
+														Qcount+":COMPLETED",  // information
+														-1
+											);	
 									}	//all jobs are done
 											//can kill myself now
 								}
@@ -316,16 +332,18 @@ public class Worker{	//worker node, need to know hardware configurations
 
 								CurrentState= "ACTIVE";
 								//zkc.getChildren(RESULT_PATH+"/"+this.JobName, ResultChildrenWatcher);
-								String ResultChildrenPath= RESULT_PATH+"/"+JobName;
+								/*String ResultChildrenPath= RESULT_PATH+"/"+JobName;
 									List<String> children=zkc.getChildren(ResultChildrenPath);
 									if(children.size()==Qcount){
 										System.out.println("all job done, quitting myself");
 										System.exit(-1);	
-									}	//all jobs are done
+									}	//all jobs are done*/
+							
 							}
+
 							else if(tokens[1].equalsIgnoreCase("KILLED")||tokens[1].equalsIgnoreCase("COMPLETED")){
 								System.out.println("Kill or completed request, ready to exit ;)");
-								CurrentState= "KILLED";
+								CurrentState= "DONE";
 								System.exit(-1);		//scheduler ask to kill myself now
 							}
 							return 1;

@@ -82,11 +82,11 @@ public class WorkerObject {
 				return Math.min(Integer.parseInt(this.memFree)/minimum_require,Integer.parseInt(cpucore));
 			}
 			else{
-				System.out.println("start to execute init_NPAIRS script.......");
+				/*System.out.println("start to execute init_NPAIRS script.......");
 				String command = "sh ../NPAIRS/init_NPAIRS.sh "+filename;	
-				/*initialized script*/			
+			
 				Process p = Runtime.getRuntime().exec(command);
-				int retcode = p.waitFor();
+				int retcode = p.waitFor();*/
 				return 7;		//for testing purpose, simply return 7 for now 
 				/*now run benchmark*/
 				/*if(retcode == 0){
