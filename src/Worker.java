@@ -184,44 +184,52 @@ public class Worker{	//worker node, need to know hardware configurations
 	                 	case NodeChildrenChanged:
 	                 		try {
 			             			synchronized(zkc){										
-					                    //if (path.equals(Workerpath)){
-					                    	Stat stat = zkc.exists(WorkerJobPath, null);
+							                //if (path.equals(Workerpath)){
+							                	Stat stat = zkc.exists(WorkerJobPath, null);
 
-					                    	List<String> children=zkc.getChildren(WorkerJobPath);
-										JobObject jo = new JobObject();
-					                    	for(String child: children){
-					                    		System.out.println(child);
-					                    		if(checkMap.get(child)==null){
-												taskinfo = zkc.getData(WorkerJobPath+"/"+child, null, stat);
-					                    			currentJob = child;													
-							                		jo.parseJobString(taskinfo);
-							                		int Qvalue= jo.nValue;
-												int jobID =jo.jobId;
-							                		String inputLocation= jo.inputFile;
-							                		WorkerThreadHandler t = new WorkerThreadHandler();
-							                		t.setVal(inputName, Qvalue, currentJob, jobID);
-					                    			checkMap.put(currentJob,t);
-					                 			/*synchronized counter incrementation*/
-					                    			iterator_increment();
-					                    			
-					                    		}
-					                    	}
+							                	List<String> children=zkc.getChildren(WorkerJobPath);
+											JobObject jo = new JobObject();
+							                	for(String child: children){
+							                		System.out.println(child);
+	
+							                		if(checkMap.get(child)==null){
+	
+													taskinfo = zkc.getData(WorkerJobPath+"/"+child, null, stat);
+
+													if(taskinfo!=null){
+														System.out.println("taskinfo is not null, can execute now");
+									            			currentJob = child;													
+											        		jo.parseJobString(taskinfo);
+											        		int Qvalue= jo.nValue;
+														int jobID =jo.jobId;
+											        		String inputLocation= jo.inputFile;
+											        		WorkerThreadHandler t = new WorkerThreadHandler();
+											        		t.setVal(inputName, Qvalue, currentJob, jobID);
+									            			checkMap.put(currentJob,t);
+
+														executor.submit(t);
+									         			/*synchronized counter incrementation*/
+									            			iterator_increment();
+													}
+							                			
+							                		}
+							                	}
 					                    	
 					                  }	
 			                        	
-			                        	if(taskinfo!=null){
+			                        	/*if(taskinfo!=null){
 			                        			System.out.println("taskinfo is not null, can execute now");
 							                
 											//add Future to the list, we can get return value using Future
 											System.out.println("waiting or no");
 
-											/*put all threads into the executor pool and start execution at once*/
+											/*put all threads into the executor pool and start execution at once
 											for (String key: checkMap.keySet()) {
 												
 												executor.submit(checkMap.get(key));
 											}
 											
-			                           }
+			                           }*/
 	                           	
 	                        } catch (Exception e) {
 	                            e.printStackTrace();

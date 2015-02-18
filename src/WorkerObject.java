@@ -87,13 +87,11 @@ public class WorkerObject {
 				/*initialized script*/			
 				Process p = Runtime.getRuntime().exec(command);
 				int retcode = p.waitFor();
-
+				return 7;		//for testing purpose, simply return 7 for now 
 				/*now run benchmark*/
-				if(retcode == 0){
+				/*if(retcode == 0){
 					System.out.println("start to run Benchmark...");
-					/*String command2 = "sh ../NPAIRS/bin/npairs_multiProc_benchmark.sh";
-					p = Runtime.getRuntime().exec(command2);
-					p.waitFor();*/
+					
 					f = new File("../NPAIRS/log/maxJobs.info");
 					if(f.exists()){
 						System.out.println("found the maxJobs file, read the number");
@@ -101,10 +99,10 @@ public class WorkerObject {
 						this.maxJobNum= Integer.parseInt(fbr.readLine());
 						return this.maxJobNum;
 					}
-				}
+				}*/
 			}
-			System.out.println("error occurs return 1 freeWorker");
-			return 1;
+			/*System.out.println("error occurs return 1 freeWorker");
+			return 1;*/
 		
 		}catch (Exception e) {
             e.printStackTrace();
