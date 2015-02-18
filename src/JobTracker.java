@@ -247,8 +247,9 @@ public class JobTracker {
 		if (stat != null) {
 			String addP = RESULT_PATH + "/" + jobId;
 		    System.out.println("Adding job id to result path: " + addP);
+			JobStatusObject jso = new JobStatusObject(count);
 			
-			createOnePersistentFolder(addP, count.toString()+":ACTIVE");
+			createOnePersistentFolder(addP, jso.toZnode());
 
 		} else {
 			System.out.println(RESULT_PATH + " does not exist in assignWork - 1");
@@ -262,8 +263,10 @@ public class JobTracker {
 		if (stat != null) {
 			int totalJobs = -1;
 			String data = zkc.getData(p, null, stat);
-			String[] splitData = data.split(":");			
-			zkc.setData(p, splitData[0] + ":KILLED", -1);
+			JobStatusObject jso = new JobStatusObject();
+			jso.toObj(data);
+			jso.killed();		
+			zkc.setData(p, jso.toZnode(), -1);
 		}
 
 		// remove jobs in job pool.
@@ -343,14 +346,16 @@ public class JobTracker {
 			int totalJobs = -1;
 			String data = zkc.getData(p, null, stat);
 			if (data != null) {
-				String[] splitData = data.split(":");
-				if (splitData[1].equalsIgnoreCase(new String("KILLED"))) {
+				JobStatusObject jso = new JobStatusObject();
+				jso.toObj(data);
+
+				if (jso.status.equalsIgnoreCase(new String("KILLED"))) {
 					// killed
 					return 2;
-				} else if (splitData[1].equalsIgnoreCase(new String("COMPLETED"))) {
+				} else if (jso.status.equalsIgnoreCase(new String("COMPLETED"))) {
 					return 1;
 				}
-				totalJobs = Integer.parseInt(splitData[0]);
+				totalJobs = jso.totalJobs;
 				
 				if (totalJobs < 0) {
 					System.out.println("ERROR: path: " + p + " has invalid data");
@@ -361,7 +366,8 @@ public class JobTracker {
 						if (removeCompletedJobs) {
 							removeJobpoolJobID(jobId);
 						}
-						zkc.setData(p, splitData[0] + ":COMPLETED", -1);
+						jso.completed();
+						zkc.setData(p, jso.toZnode(), -1);
 						
 						// finished
 						return 1;
@@ -388,17 +394,16 @@ public class JobTracker {
 		Stat stat = zkc.exists(JOBPOOL_PATH, null);
 
 		if (stat != null) {
-
-			
-
 			// check if job was killed before adding to jobpool
 			String p = RESULT_PATH + "/" + job.jobId.toString();
 			stat = zkc.exists(p, null);
 			if (stat != null) {
 				int totalJobs = -1;
 				String data = zkc.getData(p, null, stat);
-				String[] splitData = data.split(":");
-				if (splitData[1].equalsIgnoreCase(new String("KILLED"))) {
+				JobStatusObject jso = new JobStatusObject();
+				jso.toObj(data);
+
+				if (jso.status.equalsIgnoreCase(new String("KILLED"))) {
 					return false;
 				}
 			}

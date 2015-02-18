@@ -312,7 +312,7 @@ public class Scheduler {
 			ZJobIdList = zkc.getChildren(JOBPOOL_PATH);
 
 			if (ZJobIdList.size() == 0) {
-				System.out.println("jobpool has no job ids");
+				System.out.println("jobpool has no jobs");
 				return;
 			}
 

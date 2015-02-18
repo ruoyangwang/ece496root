@@ -12,7 +12,7 @@ public class WorkerThreadHandler implements Runnable {
 
 		@Override
 		public void run() {
-				long startTime = System.nanoTime();
+				long startTime = System.currentTimeMillis();
 				int retcode = -1;					     			
 				 try{ 
 													//mock of execution, depends on where we put zookeeper and NPAIRS executables we can change shell command 
@@ -27,7 +27,7 @@ public class WorkerThreadHandler implements Runnable {
 					}	//TODO:assume this is running the child node for now
 												
 							                	 	
-					long endTime = System.nanoTime();	                            		
+					long endTime = System.currentTimeMillis();	                            		
 					long executionTime = (endTime - startTime);
 					Worker.Thread_complete(executionTime, retcode, this.currentJob, this.threadNumber, this.Qvalue, this.inputName, this.jobID);
 		}
