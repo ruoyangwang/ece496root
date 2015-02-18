@@ -179,103 +179,46 @@ public class Worker{	//worker node, need to know hardware configurations
 				System.out.println("/worker created");
 			}
 			
-			//------------------------------------------------Worker Watcher construction----------------------------------------------------------
+//------------------------------------------------Worker Watcher construction----------------------------------------------------------
 			WorkerWatcher = new Watcher(){
 	        	 @Override
 	             public void process(WatchedEvent event) {
 					try{Thread.sleep(5000);}
 					catch(Exception e){}
 					 
-	                 String path = event.getPath();
-
-	                 String WorkerJobPath= JOBS_PATH+"/worker-"+Workerid;
-	                 String currentJob="dummy";
-	                 String taskinfo=null;
-	                 int retcode;
+	                 
 					 System.out.println("waiting for jobs");
 	                 switch (event.getType()){
 	                 	case NodeChildrenChanged:
-	                 		try {
-			             			synchronized(zkc){										
-							                //if (path.equals(Workerpath)){
-							                	Stat stat = zkc.exists(WorkerJobPath, null);
-
-							                	List<String> children=zkc.getChildren(WorkerJobPath);
-											System.out.println("how many children inside watch right now? ===== "+children.size());
-											JobObject jo = new JobObject();
-							                	for(String child: children){
-							                		System.out.println(child);
-	
-							                		if(checkMap.get(child)==null){
-	
-													taskinfo = zkc.getData(WorkerJobPath+"/"+child, null, stat);
-
-													if(taskinfo!=null){
-														System.out.println("taskinfo is not null, can execute now");
-									            			currentJob = child;													
-											        		jo.parseJobString(taskinfo);
-											        		int Qvalue= jo.nValue;
-														int jobID =jo.jobId;
-											        		String inputLocation= jo.inputFile;
-											        		WorkerThreadHandler t = new WorkerThreadHandler();
-											        		t.setVal(inputName, Qvalue, currentJob, jobID);
-									            			checkMap.put(currentJob,t);
-
-														executor.submit(t);
-									         			/*synchronized counter incrementation*/
-									            			iterator_increment();
-													}
-							                			
-							                		}
-							                	}
-					                    	
-					                  }	
-			                        	
-			                        	/*if(taskinfo!=null){
-			                        			System.out.println("taskinfo is not null, can execute now");
-							                
-											//add Future to the list, we can get return value using Future
-											System.out.println("waiting or no");
-
-											/*put all threads into the executor pool and start execution at once
-											for (String key: checkMap.keySet()) {
-												
-												executor.submit(checkMap.get(key));
-											}
-											
-			                           }*/
-	                           	
-	                        } catch (Exception e) {
-	                            e.printStackTrace();
-	                        }
+	                 		Worker_Watch();
 	                 		
 	                 }
 					zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
-						List<String> children=zkc.getChildren(WorkerJobPath);
+						List<String> children=zkc.getChildren(JOBS_PATH+"/worker-"+Workerid);
 					System.out.println("how many children after? ------ "+children.size());
 					
                     
-	        	 }			
+	        	 	}			
 	        };
-			//=======================================================================================================================================
+//=======================================================================================================================================
 	        
-			//------------------------------------------------Result Watcher construction----------------------------------------------------------
+//------------------------------------------------Result Watcher construction----------------------------------------------------------
 	        ResultWatcher = new Watcher(){
 				@Override
 	             public void process(WatchedEvent event) {
-	             int retcode=0;
+			         int retcode=0;
 
-	             retcode =Result_Watch();
+			         retcode =Result_Watch();
 
-	             if(retcode == 0)
-					zkc.getChildren(RESULT_PATH, ResultWatcher);
-				else
-					zkc.getData(RESULT_PATH+"/"+JobName,ResultWatcher,null);
+			         if(retcode == 0)
+						zkc.getChildren(RESULT_PATH, ResultWatcher);
+					 else
+						zkc.getData(RESULT_PATH+"/"+JobName,ResultWatcher,null);
 	             }
 	        };
-			//=======================================================================================================================================
+//=======================================================================================================================================
 
-			//------------------------------------------------Result Children Watcher construction----------------------------------------------------------
+//------------------------------------------------Result Children Watcher construction----------------------------------------------------------
 	        ResultChildWatcher = new Watcher(){
 				@Override
 	             public void process(WatchedEvent event) {
@@ -305,7 +248,7 @@ public class Worker{	//worker node, need to know hardware configurations
 	             	zkc.getChildren(RESULT_PATH+"/"+JobName, ResultChildWatcher);
 	            }
 	        };
-			//=======================================================================================================================================
+//=======================================================================================================================================
 			
 			
         } catch(Exception e) {
@@ -315,6 +258,60 @@ public class Worker{	//worker node, need to know hardware configurations
        
 	}
 	
+
+	public int Worker_Watch(){
+			try {
+	                 String WorkerJobPath= JOBS_PATH+"/worker-"+Workerid;
+	                 String currentJob="dummy";
+	                 String taskinfo=null;
+	                 int retcode;
+         			synchronized(zkc){										
+			                //if (path.equals(Workerpath)){
+			                	Stat stat = zkc.exists(WorkerJobPath, null);
+
+			                	List<String> children=zkc.getChildren(WorkerJobPath);
+							System.out.println("how many children inside watch right now? ===== "+children.size());
+							JobObject jo = new JobObject();
+			                	for(String child: children){
+			                		System.out.println(child);
+
+			                		if(checkMap.get(child)==null){
+
+									taskinfo = zkc.getData(WorkerJobPath+"/"+child, null, stat);
+
+									if(taskinfo!=null){
+										System.out.println("taskinfo is not null, can execute now");
+					            			currentJob = child;													
+							        		jo.parseJobString(taskinfo);
+							        		int Qvalue= jo.nValue;
+										int jobID =jo.jobId;
+							        		String inputLocation= jo.inputFile;
+							        		WorkerThreadHandler t = new WorkerThreadHandler();
+							        		t.setVal(inputName, Qvalue, currentJob, jobID);
+					            			checkMap.put(currentJob,t);
+
+										executor.submit(t);
+					         			/*synchronized counter incrementation*/
+					            			iterator_increment();
+									}
+			                			
+			                		}
+			                	}
+	                    	
+	                  }	
+	                   
+                     return 0;
+	
+            } catch (Exception e) {
+                e.printStackTrace();
+				return -1;
+            }
+	
+	}
+
+
+
+
 	public int Result_Watch(){
 		try {
 	               System.out.println("inside the ResultWatcher for watching result root");
@@ -373,6 +370,9 @@ public class Worker{	//worker node, need to know hardware configurations
 		iterator-=1;
 	}
 
+
+
+
 	public void Building(String filename){
 		//create child directory of worker, assign id to that worker
 			try{
@@ -403,7 +403,7 @@ public class Worker{	//worker node, need to know hardware configurations
 		                    );
 
 				for(index=0;index<max_executions;index++){
-					System.out.println("creating workerObjects");
+					System.out.println("creating freeworkerObjects");
 					zkc.create(					 				//create free worker object
 			                FREE_WORKERS_PATH+"/"+"worker-"+Workerid+":"+index,       // Path
 			                info,   // information
@@ -422,7 +422,11 @@ public class Worker{	//worker node, need to know hardware configurations
 				else
 					zkc.getData(RESULT_PATH+"/"+JobName,ResultWatcher,null);
 
-
+				/*watch worker, ready to work*/
+				List<String> children=zkc.getChildren(JOBS_PATH+"/worker-"+Workerid);
+				if(children.size()>0)
+					Worker_Watch();
+				zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
 				
 				}catch(Exception e) {
             			System.out.println("Building Worker: "+ e.getMessage());
@@ -430,6 +434,9 @@ public class Worker{	//worker node, need to know hardware configurations
 		}
 
 	
+
+
+
 
 	  private static synchronized void createOnePersistentFolder(String Path, String value){	
 		// create folder
