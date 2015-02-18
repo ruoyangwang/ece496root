@@ -201,6 +201,7 @@ public class Worker{	//worker node, need to know hardware configurations
 							                	Stat stat = zkc.exists(WorkerJobPath, null);
 
 							                	List<String> children=zkc.getChildren(WorkerJobPath);
+											System.out.println("how many children inside watch right now? ===== "+children.size());
 											JobObject jo = new JobObject();
 							                	for(String child: children){
 							                		System.out.println(child);
@@ -248,7 +249,11 @@ public class Worker{	//worker node, need to know hardware configurations
 	                            e.printStackTrace();
 	                        }
 	                 		
-	                 }zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
+	                 }
+					zkc.getChildren(JOBS_PATH+"/worker-"+Workerid, WorkerWatcher );
+						List<String> children=zkc.getChildren(WorkerJobPath);
+					System.out.println("how many children after? ------ "+children.size());
+					
                     
 	        	 }			
 	        };
