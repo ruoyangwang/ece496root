@@ -58,7 +58,8 @@ public class Worker{	//worker node, need to know hardware configurations
 	final static String SEQ_PATH = "/seq";
 	final static String JOBPOOL_PATH = "/jobpool";
 	final static String FREE_WORKERS_PATH = "/freeWorkers";
-
+	
+	static long startTime;
 	static String CurrentState;
 	static String inputName;
 	static String JobName;
@@ -156,6 +157,7 @@ public class Worker{	//worker node, need to know hardware configurations
 					
 					if(children.size()==Qcount){
 						JobStatusObject jso = new JobStatusObject(Qcount);
+						jso.startTime = startTime;
 						jso.completed();
 						
 						zkc.setData(											//set data for worker
@@ -234,6 +236,7 @@ public class Worker{	//worker node, need to know hardware configurations
 									List<String> children=zkc.getChildren(ResultChildrenPath);
 									if(children.size()==Qcount){
 											JobStatusObject jso = new JobStatusObject(Qcount);
+											jso.startTime = startTime;
 											jso.completed();
 											zkc.setData(											//set data for worker
 														RESULT_PATH+"/"+JobName,       // Path
@@ -332,21 +335,16 @@ public class Worker{	//worker node, need to know hardware configurations
 						}
 						if(Jobinfo !=null){
 							String[] tokens = Jobinfo.split(":");
-							System.out.println("check tokens:  ------ "+tokens[0]+" ---- "+tokens[1]);
-							if(Qcount ==0)
+							System.out.println("check tokens:  ------ "+tokens[0]+" ---- "+tokens[1] +"------ "+tokens[2]);
+							
+							if(Qcount ==0){
 								Qcount = Integer.parseInt(tokens[0]);
+								startTime = Long.parseLong(tokens[2]);
+							}
 							
 							if(tokens[1].equalsIgnoreCase("ACTIVE")){
 
 								CurrentState= "ACTIVE";
-								//zkc.getChildren(RESULT_PATH+"/"+this.JobName, ResultChildrenWatcher);
-								/*String ResultChildrenPath= RESULT_PATH+"/"+JobName;
-									List<String> children=zkc.getChildren(ResultChildrenPath);
-									if(children.size()==Qcount){
-										System.out.println("all job done, quitting myself");
-										System.exit(-1);	
-									}	//all jobs are done*/
-							
 							}
 
 							else if(tokens[1].equalsIgnoreCase("KILLED")||tokens[1].equalsIgnoreCase("COMPLETED")){
