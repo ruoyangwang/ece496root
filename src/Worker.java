@@ -153,10 +153,14 @@ public class Worker{	//worker node, need to know hardware configurations
 					System.out.println("current worker free, set watch for resultChild:  ");
 					String ResultChildrenPath= RESULT_PATH+"/"+JobName;
 					List<String> children=zkc.getChildren(ResultChildrenPath);
+					
 					if(children.size()==Qcount){
+						JobStatusObject jso = new JobStatusObject(Qcount);
+						jso.completed();
+						
 						zkc.setData(											//set data for worker
 						            RESULT_PATH+"/"+JobName,       // Path
-						            Qcount+":COMPLETED",  // information
+						            jso.toZnode(),  // information
 									-1
 						           );	
 					}
@@ -229,9 +233,11 @@ public class Worker{	//worker node, need to know hardware configurations
 			             			String ResultChildrenPath= RESULT_PATH+"/"+JobName;
 									List<String> children=zkc.getChildren(ResultChildrenPath);
 									if(children.size()==Qcount){
+											JobStatusObject jso = new JobStatusObject(Qcount);
+											jso.completed();
 											zkc.setData(											//set data for worker
 														RESULT_PATH+"/"+JobName,       // Path
-														Qcount+":COMPLETED",  // information
+														jso.toZnode(),  // information
 														-1
 											);	
 									}	//all jobs are done

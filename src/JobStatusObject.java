@@ -40,6 +40,8 @@ public class JobStatusObject {
 
 	public void completed() {
 		this.status = COMPLETED;
+		this.endTime = System.currentTimeMillis();
+		this.getExecutionTime();
 	}
 
 
