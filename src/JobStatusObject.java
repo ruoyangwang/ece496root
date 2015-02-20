@@ -10,7 +10,7 @@ public class JobStatusObject {
 	public final String KILLED = "KILLED";
 	public final String ACTIVE = "ACTIVE";
 
-	public final String DIVIDER = ";";
+	public final String DIVIDER = ":";
 
 	public JobStatusObject() {
 		this.totalJobs = null;

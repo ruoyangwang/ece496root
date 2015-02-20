@@ -198,7 +198,8 @@ public class HandleClient extends Thread{
 				int result = checkResult(jobId);
 				packetToClient =  "Job ID - " + jobId + ":";
 				if (result == 1) {
-					packetToClient =  packetToClient + " Finished.";
+					String t = JobTracker.getJobRunTime(jobId);
+					packetToClient = t;
 				} else if (result == 2) {
 					packetToClient =  packetToClient + " Was killed.";
 				} else if (result == 0) {
@@ -226,7 +227,11 @@ public class HandleClient extends Thread{
 				startWorkers(allWorkers, inputFileName, jobId);
 
 				destroyWorkerStartingProcesses();
-				packetToClient="Hosts " + arrayToString(allWorkers) + " added to computation cluster.\n" + arrayToString(startedWorkers) + " were already started.";
+				packetToClient="Hosts " + arrayToString(allWorkers) + " added to computation cluster.\n";
+				
+				if (startedWorkers.size() > 0) {
+				 packetToClient = packetToClient + arrayToString(startedWorkers) + " were already started.";
+				}
 
 			} else {
 				System.out.println("Unknown Request");

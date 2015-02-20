@@ -246,9 +246,9 @@ public class JobTracker {
 		stat = zkc.exists(RESULT_PATH, null);
 		if (stat != null) {
 			String addP = RESULT_PATH + "/" + jobId;
-		    System.out.println("Adding job id to result path: " + addP);
 			JobStatusObject jso = new JobStatusObject(count);
-			
+			jso.startTime = System.currentTimeMillis();
+		    System.out.println("Adding job id to result path: " + addP + "with data: "+jso.toZnode());
 			createOnePersistentFolder(addP, jso.toZnode());
 
 		} else {
@@ -338,6 +338,22 @@ public class JobTracker {
 
 		return unfinished;
 	}
+
+	public static String getJobRunTime(String jobId) {
+		int completed = checkResult(jobId, false);
+		if (completed != 1) {
+			return new String("Job "+jobId+" is either killed or not completed");
+		} else {
+			Stat stat = null;
+			String data = zkc.getData(RESULT_PATH + "/" + jobId, null, stat);
+			JobStatusObject jso = new JobStatusObject();
+			jso.toObj(data);
+			long min = jso.executionTimeM;
+			long hr = jso.executionTimeH;
+			return new String("Job "+jobId+" took "+hr+" hours ("+min+" min)");	
+		}
+        }
+
 
 	public static int checkResult(String jobId, boolean removeCompletedJobs) {
 		String p = RESULT_PATH + "/" + jobId;
