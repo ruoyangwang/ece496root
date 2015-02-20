@@ -183,7 +183,9 @@ public class JobTracker {
 	   	 	} else {
 				System.out.println(Path.toString()+" path creation failed!");
 			}
-        }
+        } else {
+		System.out.println(Path.toString() + " path already exists");
+	}
     }
 
 	public static synchronized void setCurrentJob (String filename, String jobId) {
@@ -231,7 +233,9 @@ public class JobTracker {
 	 */
 	public static synchronized void addJobIdToPool(String jobId, Integer count) {
 		Stat stat = zkc.exists(JOBPOOL_PATH, null);
-
+		if (jobId == null || jobId.length() == 0) {
+			return;
+		}
 		if (stat != null) {
 
 			String addP = JOBPOOL_PATH + "/" + jobId;
@@ -258,6 +262,9 @@ public class JobTracker {
 
 	public static void killJob (String jobId) {		
 		// set jobto killed in result path this will trigger workers to exit.
+		if (jobId == null || jobId.length() == 0) {
+			return;
+		}
 		String p = RESULT_PATH + "/" + jobId;
 		Stat stat = zkc.exists(p, null);
 		if (stat != null) {

@@ -439,7 +439,7 @@ public class Scheduler {
 		createOnePersistentFolder(FREE_WORKERS_PATH, null);
 
 		// create jobpool folder
-		createOnePersistentFolder(JOBPOOL_PATH, null);
+		createOnePersistentFolder(JOBPOOL_PATH, "1");
     }
 
 	/**
