@@ -83,7 +83,7 @@ public class WorkerObject {
 			}
 			else{
 				System.out.println("start to execute init_NPAIRS script.......");
-				String command = "sh ../NPAIRS/init_NPAIRS.sh "+filename;	
+				String command = "sh ../NPAIRS/init_NPAIRS.sh "+filename+" &> ~/init_npairs_runtime.log";	
 			
 				Process p = Runtime.getRuntime().exec(command);
 				int retcode = p.waitFor();
