@@ -19,12 +19,18 @@ public class WorkerThreadHandler implements Runnable {
 					System.out.println("executing jobs.....");
 					//String command = "sh ../execute/execute.sh " + this.inputLocation+" "+ this.Qvalue;	
 					String command = "sh ../execute/execute.sh "+this.inputName + " "+this.Qvalue;
-					Process p = Runtime.getRuntime().exec(command);
-					retcode=p.waitFor();
-									
-					} catch (Exception e) {
+					//Process p = Runtime.getRuntime().exec(command);
+					//retcode=p.waitFor();
+						
+					while(retcode!=0){
+						Process p = Runtime.getRuntime().exec(command);
+						retcode=p.waitFor();
+
+					}	
+						
+				} catch (Exception e) {
 						e.printStackTrace();
-					}	//TODO:assume this is running the child node for now
+				}	//TODO:assume this is running the child node for now
 												
 							                	 	
 					long endTime = System.currentTimeMillis();	                            		

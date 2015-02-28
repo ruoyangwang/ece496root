@@ -2,7 +2,6 @@
 #!/bin/bash
 cd ../NPAIRS/data/$1
 sleep 1
-sh run_npairs.sh $2
-wait
-return 0
-
+bash run_npairs.sh $2
+retcode=$?
+exit $retcode
