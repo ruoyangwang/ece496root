@@ -235,6 +235,7 @@ public class Scheduler {
 					Stat js = zkc.exists(jobPath, null);
 					if (js != null) {
 						// add job to worker directory
+						j.recordStartTime();
 						Code ret = createOnePersistentFolder(workerPath + "/" + j.getJobNodeName(), j.toJobDataString());
 
 						// remove job from job pool
