@@ -6,8 +6,7 @@ public class JobObject {
 	// location of the input file for the job.
 	public String inputFile; 
 
-
-//** Below are params that are not currently used but anticipated to be used. **
+	public Long startTime;
 
 	// location of the output file for the job.
 	public String outputFile; 
@@ -39,12 +38,25 @@ public class JobObject {
 
 	// Parse job data string into object.
 	public void parseJobString(String jobString) {
+		if (jobString == null) {
+			return;	
+		}
 		String [] partial = jobString.split(DELIMITER);
-		
-		this.jobId = Integer.parseInt(partial[0]);
-		this.nValue = Integer.parseInt(partial[1]);
-		this.inputFile = partial[2];
+		try{
+			this.jobId = Integer.parseInt(partial[0]);
+			this.nValue = Integer.parseInt(partial[1]);
+			this.inputFile = partial[2];
+			this.startTime = Long.parseLong(partial[3]);
+		} catch(Exception e) {
+			;
+		}
 	}
+
+	public void recordStartTime() {
+		this.startTime = System.currentTimeMillis(); 
+	}
+
+
 
 	// Parse result data string into object.
 	// TODO: this is not yet used
@@ -75,7 +87,7 @@ public class JobObject {
 	// when this job is in jobpool/worker
 	public String toJobDataString() {
 		// Formate: "jobId:nValue:inputFile"
-		return jobId.toString() + DELIMITER + nValue.toString() + DELIMITER + inputFile;
+		return jobId.toString() + DELIMITER + nValue.toString() + DELIMITER + inputFile + DELIMITER + startTime.toString();
 	}
 	
 

@@ -285,8 +285,65 @@ public class Scheduler {
 	private void doSchedule() {
 		System.out.println("Scheduling jobs");   
 		if (workersList.size() > 0 && jobsList.size() > 0) {
+
+			List<JobObject> jobListCopy = new ArrayList<JobObject>();
+			// create a copy of jobList
+			// NOTE: we want to keep the reference to jo the same as the original list
+			for(JobObject jo: jobsList) {
+				jobListCopy.add(jo);
+			}
+
+			
+			// get jobs currently being worked on by each worker
+			Hashtable<String, List<JobObject>> currentWorkerJobs = new Hashtable<String, List<JobObject>>();
+			for(WorkerObject wo; workersList) {
+				String woName = wo.getNodeName();
+				if (woName != null) {
+					String path = JOBS_PATH + "/" + woName;
+					Stat stat = zkc.exists(path, null);
+					// if the worker exists under the jobs path
+					if (stat != null) {
+						List<JobObject> curJobList = new ArrayList<JobObject>();
+						// get all the job names it is currently working on
+						List<String> jobChildren = zkc.getChildren(path);
+						jc = jobChildren.listIterator();
+						while(jc.hasNext()){
+							String jobName = (String)cl.next();
+							String workerJobPath = path + "/" + jobName;
+							stat = zkc.exists(workerJobPath, null); 
+
+							if (stat != null) {
+								// get the info of the job currently working on 
+								String jobData = zkc.getData(workerJobPath, null, stat);
+
+								JobObject jo = new JobObject();
+								jo.parseJobString(jobData);
+							
+								curJobList.add(jo);
+							}
+						}
+
+						if (curJobList.size() > 0) {
+							currentWorkerJobs.put(woName, curJobList);
+						} else {
+							currentWorkerJobs.put(woName, null);
+						}
+
+						
+					} else {
+						// currently no job
+						currentWorkerJobs.put(woName, null);
+					}
+				} else {
+					System.out.println("worker object does not have name");
+				}
+			}
+
+
+
+
 			// scheduler may depend on current state of the workers as well ??
-			jobQueue = ScheduleAlgo.scheduleJobs(workersList, jobsList); 
+			jobQueue = ScheduleAlgo.scheduleJobs(workersList, jobsList, currentWorkerJobs); 
 		} else {
 			// no jobs
 			jobQueue = null;
