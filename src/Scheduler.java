@@ -38,6 +38,8 @@ public class Scheduler {
 
 	private ArrayList<String> knownJobIds;
 
+	boolean rescheduleWhenNoJob;
+
     // watcher for primary/backup of job tracker
 	Watcher schedulerWatcher;
 	// Watcher on workers directory
@@ -176,7 +178,33 @@ public class Scheduler {
 	}
 
 	private void removeFromJobList(List<JobObject> remove) {
-		jobsList.removeAll(remove);
+		List <JobObject> markForDeletion = new ArrayList<JobObject>();
+		for (JobObject jo : jobsList) {
+			String joName = jo.getJobNodeName();
+			for (JobObject rmJob: remove) {
+				if (joName.equals(rmJob.getJobNodeName())) {
+					markForDeletion.add(jo);
+					break;
+				}
+			}
+		}
+		if (markForDeletion.size() > 0)
+			jobsList.removeAll(markForDeletion);
+	}
+
+	private void removeSingleJobFromJobList(JobObject remove) {
+		JobObject toRemove = null;
+		for (JobObject jo : jobsList) {
+			String joName = jo.getJobNodeName();
+			if (joName.equals(remove.getJobNodeName())) {
+				toRemove = jo;
+				break;
+			}
+		}
+
+		if (toRemove != null) {
+			jobsList.remove(toRemove);
+		}
 	}
 
 	private void attemptToAssignJobs() {
@@ -221,10 +249,20 @@ public class Scheduler {
 		l = freeWorkerNames.listIterator();
 		List<JobObject> removedJobs = new ArrayList<JobObject>();
 
+
+		boolean reschedulingDone = false;
 		while(l.hasNext()) {
 			WorkerObject wo = (WorkerObject)l.next();
 			String workerName = wo.getNodeName();
 			JobObject j = getJob(workerName);
+
+			if(j == null && !reschedulingDone && rescheduleWhenNoJob) {
+				reschedulingDone = true;
+				doSchedule();
+				j = getJob(workerName);
+			}
+
+
 			if (j != null) {
 				// try to add job to worker directory
 				String workerPath = JOBS_PATH + "/" + workerName;
@@ -247,7 +285,8 @@ public class Scheduler {
 							//removeIfNoChildren(j.getJobpoolParentPath());
 
 							// remove from jobsList
-							removedJobs.add(j);
+							//removedJobs.add(j);
+							removeSingleJobFromJobList(j);
 						}
 					} else {
 						System.out.println("ERR: Failed to assign job. Job dir: " + jobPath + " does not exist");  
@@ -261,9 +300,9 @@ public class Scheduler {
 
 		}
 
-		if (removedJobs.size() > 0) {
-			removeFromJobList(removedJobs);
-		}
+		//if (removedJobs.size() > 0) {
+		//	removeFromJobList(removedJobs);
+		//}
 	}
 
 	private JobObject getJob(String workerName) {
@@ -297,7 +336,7 @@ public class Scheduler {
 			
 			// get jobs currently being worked on by each worker
 			Hashtable<String, List<JobObject>> currentWorkerJobs = new Hashtable<String, List<JobObject>>();
-			for(WorkerObject wo; workersList) {
+			for(WorkerObject wo: workersList) {
 				String woName = wo.getNodeName();
 				if (woName != null) {
 					String path = JOBS_PATH + "/" + woName;
@@ -307,9 +346,9 @@ public class Scheduler {
 						List<JobObject> curJobList = new ArrayList<JobObject>();
 						// get all the job names it is currently working on
 						List<String> jobChildren = zkc.getChildren(path);
-						jc = jobChildren.listIterator();
+						Iterator jc = jobChildren.listIterator();
 						while(jc.hasNext()){
-							String jobName = (String)cl.next();
+							String jobName = (String)jc.next();
 							String workerJobPath = path + "/" + jobName;
 							stat = zkc.exists(workerJobPath, null); 
 
@@ -571,7 +610,8 @@ public class Scheduler {
         System.out.println("Location of jobTracker: "+schedulerServerInfo);
 
         Scheduler s = new Scheduler(zookeeperLocation);   
-		
+
+		s.rescheduleWhenNoJob = true;
 
         s.tryToBeBoss();
 
