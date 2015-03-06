@@ -1,37 +1,41 @@
-import java.net.*;
-import java.io.*;
 import java.util.*;
 
+/**
+ * Scheduling algotrithm used to assign jobs to workers.
+ *
+ * @author Jie (Jacky) Liu, jjiiee.liu@mail.utoronto.ca
+ */
 class ScheduleAlgo {
-	// May also depend on current state of the workers as well ??
+
+	/**
+	 * Schedule jobs to workers given a list of jobs and workers.
+	 * 
+	 * NOTE: A list of jobs currenly executing by each worker can be provided. See Scheduler.java
+	 * 
+	 * @param workersList - a list of workers connected to the system
+	 * @param jobsList - a list of unstarted jobs
+	 * @return - a hashtable of job queues for each worker keyed by worker names.
+	 */
 	public static Hashtable<String, Queue<JobObject>> scheduleJobs(List<WorkerObject> workersList, List<JobObject> jobsList) {
-
 		Hashtable<String, Queue<JobObject>> scheduledJobs = new Hashtable<String, Queue<JobObject>>();
-		List<JobObject> jobListCopy = new ArrayList<JobObject>();
 
+		// initialize scheduledJobs with worker names.		
 		for(WorkerObject wo: workersList) {
-			// initialize scheduledJobs
 			String workerName = wo.getNodeName();
 			scheduledJobs.put(workerName, new LinkedList<JobObject>());
 		}
 
-
-		// create a copy of jobList
-		// NOTE: we want to keep the reference to jo the same as the original list
-		for(JobObject jo: jobsList) {
-			jobListCopy.add(jo);
-		}
-
-		// For now do random assign.
-		// Every worker grabs a job from the list.
-		while (jobListCopy.size() > 0) {
+		// For now do random assignment.
+		// Every worker grabs a job from the list until it is empty.
+		while (jobsList.size() > 0) {
 			for(WorkerObject wo: workersList) {
 				String workerName = wo.getNodeName();
-				// remove the first job from list				
+			
 				JobObject j = null;
-				if (jobListCopy.size()>0) {
+				if (jobsList.size()>0) {
 					try {	
-						j=jobListCopy.remove(0);
+						// remove the first job from list	
+						j=jobsList.remove(0);
 					} catch (Exception e) {
 						j=null;
 					}
@@ -39,13 +43,15 @@ class ScheduleAlgo {
 					// list empty
 					break;
 				}
+
 				if (j != null) {
 					Queue<JobObject> q = scheduledJobs.get(workerName);
 					q.add(j);
+				} else {
+					break;
 				}
 			}
 		}
-
 		return scheduledJobs;
 	};
 }

@@ -12,7 +12,12 @@ import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.Watcher.Event.EventType;
 
-
+/**
+ * Responsibilities of Client:
+ * 1. Submit appropriatly formatted requests to jobtracker.
+ *
+ * @author Jie (Jacky) Liu, jjiiee.liu@mail.utoronto.ca
+ */
 public class Client {
 
 	static Socket socket;
@@ -20,50 +25,56 @@ public class Client {
     static ObjectInputStream Sin = null;
     static ObjectOutputStream Sout = null;
 
+	final static boolean DEBUG = false;
+
+	/**
+	 * Connection to jobtracker with jobtracker location information from zookeeper.
+	 */
 	private static void getConn(){
 		String resultData;
 		Stat stat = null;
 		String rPath = "/jobTracker";
+
+		// Get jobtracker information
 		stat = zkc.exists(rPath, null);
 		if(stat == null){
 			System.out.println("Error: jobTracker does not exist. Try again later.");
 			return;
 		}
+
 		resultData = zkc.getData(rPath, null, stat);
 		if(resultData == null){
 			System.out.println("Error: failed to get data from jobTracker. Try again later.");
 			return;
 		}
 
-		//System.out.println("Got from zookeeper -"+resultData);
-		String[] temp = resultData.split(":");
-
-		try{
-			socket = new Socket(temp[0], Integer.parseInt(temp[1]));
-
+		// Connect to jobtracker
+		String[] jobTrackerLocation = resultData.split(":");
+		try {
+			socket = new Socket(jobTrackerLocation[0], Integer.parseInt(jobTrackerLocation[1]));
 			Sout = null;
 			Sin = null;
+			if (DEBUG)
+				System.out.println("getConn Successful host:"+jobTrackerLocation[0]+" port:"+jobTrackerLocation[1]);
 
-			//System.out.println("getConn Successful host:"+temp[0]+" port:"+temp[1]);
-
-		}catch(Exception e)
-		{
-			//System.out.println("Exception at getConn: "+resultData);
+		} catch(Exception e) {
+			if (DEBUG)
+				System.out.println("Exception at getConn: "+resultData);
 		}
-
-
 	}
 
+	/**
+	 * Take user inputs and submit requests to jobtracker
+	 */
 	public static void main(String[] args) {
-
-
 		if (args.length != 1) {
-            System.out.println("Usage: java -classpath lib/zookeeper-3.3.2.jar:lib/log4j-1.2.15.jar:. Client zkServer:clientPort");
+            System.out.println("Usage: sh ./bin/client.sh zkServer");
             return;
         }
 
 		socket= null;
  		zkc = new ZkConnector();
+
         try {
             zkc.connect(args[0]);
         } catch(Exception e) {
@@ -79,10 +90,11 @@ public class Client {
 		String kill = "kill";
 
 		while(true){
+			// help text
 			System.out.println("");
 			System.out.println("Enter:");
 			System.out.println("\"run\" followed by an input file, Q values and hosts to start a new job");
-			System.out.println("ex: \"run inputfile.txt 1-3,5 c123,c124,c125\" would run npairs with inputfile,txt with Q values 1,2,3,5 on machiens c123 c124 and c125");
+			System.out.println("ex: \"run inputfile 1-3,5 c123,c124,c125\" would run npairs to execute with inputfile and Q values 1,2,3,5 on machiens c123 c124 and c125");
 			System.out.println("\"add\" followed by hosts to add more machies to the computation");
 			System.out.println("\"status\" follow by tracking ID to get status for the job");
 			System.out.println("\"kill\" follow by tracking ID to get kill the job");
@@ -98,12 +110,13 @@ public class Client {
 			List<String> commandComponents = Arrays.asList(userCommand.split(" "));
 			String type = commandComponents.get(0);
 
+			// run (new job) request
 			if(run.equalsIgnoreCase(type)){
-			
 				String inputFile = null;
 				String qValues = null;
 				String hosts = null;
 					
+				// make sure we have all params
 				if (commandComponents.size() >= 4) {
 					inputFile = commandComponents.get(1);
 					qValues = commandComponents.get(2);
@@ -130,11 +143,13 @@ public class Client {
 					hosts = in.nextLine().trim();
 				}
 	
+				// format request.
 				Request = "run:" + inputFile + ":" + qValues + ":" +hosts;
-
+			
+			// status request
 			}else if (status.equalsIgnoreCase(type)) {
 				String jobId = null;
-					
+				// make sure we have all params
 				if (commandComponents.size() >= 2) {
 					jobId = commandComponents.get(1);
 				}
@@ -146,9 +161,10 @@ public class Client {
 	
 				Request = "status:" + jobId;
 
+			// kill request
 			}else if (kill.equalsIgnoreCase(type)) {
 				String jobId = null;
-					
+				// make sure we have all params
 				if (commandComponents.size() >= 2) {
 					jobId = commandComponents.get(1);
 				}
@@ -160,16 +176,10 @@ public class Client {
 	
 				Request = "kill:" + jobId;
 
-			}else if(q.equalsIgnoreCase(type)){
-
-				System.out.println("Quitting");
-				// quit
-				return;
-
-			}else if (addHost.equalsIgnoreCase(type)) {
-				// addHost
-
+			// add worker request
+			} else if (addHost.equalsIgnoreCase(type)) {
 				String hosts = null;
+				// make sure we have all params
 				if (commandComponents.size() == 2) {
 					hosts = commandComponents.get(1);				
 				}
@@ -179,6 +189,14 @@ public class Client {
 					hosts = in.nextLine().trim();
 				}
 				Request = "add:" + hosts;
+
+			// quitting client
+			} else if(q.equalsIgnoreCase(type)){
+
+				System.out.println("Quitting");
+				// quit
+				return;
+
 			} else {
 				System.out.println("Unknown request");
 				continue;
@@ -189,8 +207,12 @@ public class Client {
 			}
 
 			int retry =1;
-			System.out.println("Request is "+Request);
+			if (DEBUG)
+				System.out.println("Request is "+Request);
+
+			// Submit the fomatted request to jobtracker
 			while(retry == 1){
+				// try to get connection if we dotn have a socket.
 				if (socket == null) {
 					try {
 						Thread.sleep(1000);
@@ -212,7 +234,6 @@ public class Client {
  						Sin = new ObjectInputStream(socket.getInputStream());
 
  					Reply = (String) Sin.readObject();
- 				
 
  				} catch (Exception e) {
 					System.out.println("Exception at writeObject/readObject");
@@ -223,28 +244,25 @@ public class Client {
 					} catch (Exception ex) {}
 
 					getConn();
+					// retry
 					continue;
  				}
 				retry =0;
 			} 
 		
 			System.out.println(Reply);
-			try{
+			try {
 				Sin.close();
 				Sout.close();
 				socket.close();
 				Sin = null;
 				Sout = null;
 				socket = null;
-			}catch (Exception ex){
+			} catch (Exception ex) {
 				Sin = null;
 				Sout = null;
 				socket = null;
 			}	
 		}
-
-
 	}
-
-
 }

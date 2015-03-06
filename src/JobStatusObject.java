@@ -1,17 +1,31 @@
+/**
+ * JobStatusObject represebt a job status.
+ * Provides functions to parse data from/to znodes and
+ * functions to set status, start time and end time.
+ * 
+ * The JobStatusObject znodes is current used in:
+ * 	/result/{JobStatusObject}
+ *
+ * @author Jie (Jacky) Liu, jjiiee.liu@mail.utoronto.ca
+ */
 public class JobStatusObject {
 	public Integer totalJobs;
 	public String status;
-	public Long startTime; // System.currentTimeMillis()
-	public Long endTime;
-	public Long executionTimeM; // in min
+	public Long startTime; // milli seconds 
+	public Long endTime; // milli seconds 
+	public Long executionTimeM; // in mins
 	public Long executionTimeH; // in hours
-
+	
+	// Status constants
 	public final String COMPLETED = "COMPLETED";
 	public final String KILLED = "KILLED";
 	public final String ACTIVE = "ACTIVE";
 
 	public final String DIVIDER = ":";
 
+	/**
+ 	 * Constructures for JobStatusObject
+	 */
 	public JobStatusObject() {
 		this.totalJobs = null;
 		this.status = null;
@@ -33,11 +47,18 @@ public class JobStatusObject {
 		this.endTime = null;
 	}
 
-
+	/**
+	 * Set status to killed.
+	 */
 	public void killed() {
 		this.status = KILLED;
 	}
 
+	
+	/**
+	 * Set status to completed and the end time.
+	 * Calculates the execution time.
+	 */
 	public void completed() {
 		this.status = COMPLETED;
 		this.endTime = System.currentTimeMillis();
@@ -45,6 +66,10 @@ public class JobStatusObject {
 	}
 
 
+	/**
+	 * Calculates the execution time based on the start and end time.
+	 * @return - execution time in minutes
+	 */
 	public Long getExecutionTime() {
 		if (endTime != null && startTime != null) {
 			this.executionTimeM = (endTime - startTime) / 60000L;
@@ -54,6 +79,10 @@ public class JobStatusObject {
 		return executionTimeM;
 	}
 
+	/**
+	 * Parse znode data to JobStatusObject
+	 * @param znodeData - znode data for a JobStatusObject
+	 */
 	public void toObj(String znodeData) {
 		if (znodeData != null) {
 			String[] data = znodeData.split(DIVIDER);
@@ -76,7 +105,9 @@ public class JobStatusObject {
 		}
 	}
 
-
+	/**
+	 * Get the string representation of JobStatusObject to store in znode.
+	 */
 	public String toZnode() {
 		if (totalJobs == null || status == null) {
 			System.out.println("error in converting job status obj to znode");

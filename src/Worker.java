@@ -292,7 +292,7 @@ public class Worker{	//worker node, need to know hardware configurations
 										System.out.println("taskinfo is not null, can execute now");
 					            			currentJob = child;													
 							        		jo.parseJobString(taskinfo);
-							        		int Qvalue= jo.nValue;
+							        		int Qvalue= jo.qValue;
 										int jobID =jo.jobId;
 							        		String inputLocation= jo.inputFile;
 							        		WorkerThreadHandler t = new WorkerThreadHandler();

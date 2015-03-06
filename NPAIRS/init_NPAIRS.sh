@@ -6,7 +6,8 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 cd $DIR
 
 #Specify input image data file name without exetention
-DATA_FILE="fmri_Resting-State-NPAIRS"
+#DATA_FILE="fmri_Resting-State-NPAIRS"
+DATA_FILE="$1"
 
 bin/kill_all_npair.sh
 

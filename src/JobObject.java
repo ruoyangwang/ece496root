@@ -1,90 +1,72 @@
+/**
+ * JobObject represents a job.
+ * Provides functions to parse data from/to znodes.
+ *
+ * The JobObject znodes is current used in:
+ * 	/jobpool/{jobId}/{JobObject} 
+ * and
+ * 	/jobs/{workerName}/{JobObject} 
+ *
+ * @author Jie (Jacky) Liu, jjiiee.liu@mail.utoronto.ca
+ */
 public class JobObject {
 
 	public Integer jobId;
-	public Integer nValue;
-
-	// location of the input file for the job.
+	public Integer qValue;
 	public String inputFile; 
 
-
-//** Below are params that are not currently used but anticipated to be used. **
-
-	// location of the output file for the job.
-	public String outputFile; 
-	// estimated time by the scheduler.
-	public Integer estimatedTime;
-	// actual completion time
-	public Integer completionTime;
-	// reqirement for this job
-	public String requirement;
-//*******************************************************************************
-
 	public final String DELIMITER = ":";
-
 	public final String JOBPOOL_PATH = "/jobpool";
 
 	// constuctors
 	public JobObject(){};
-
-    public JobObject(Integer jobId, Integer nValue) {
+    public JobObject(Integer jobId, Integer qValue) {
 		this.jobId = jobId;
-		this.nValue = nValue;
+		this.qValue = qValue;
     };
-
-    public JobObject(Integer jobId, Integer nValue, String inputFile) {
+    public JobObject(Integer jobId, Integer qValue, String inputFile) {
 		this.jobId = jobId;
-		this.nValue = nValue;
+		this.qValue = qValue;
 		this.inputFile = inputFile;
     };
 
-	// Parse job data string into object.
+	/**
+	 * Parse znode data to JobObject
+	 * @param jobString - znode data for a job
+	 */
 	public void parseJobString(String jobString) {
 		String [] partial = jobString.split(DELIMITER);
 		
 		this.jobId = Integer.parseInt(partial[0]);
-		this.nValue = Integer.parseInt(partial[1]);
+		this.qValue = Integer.parseInt(partial[1]);
 		this.inputFile = partial[2];
 	}
 
-	// Parse result data string into object.
-	// TODO: this is not yet used
-	public void parseResultString(String resultString) {
-		String [] partial = resultString.split(DELIMITER);
-		
-		this.jobId = Integer.parseInt(partial[0]);
-		this.nValue = Integer.parseInt(partial[1]);
-		this.outputFile = partial[2];
-		this.completionTime = Integer.parseInt(partial[3]);
-	}
-
+	/**
+	 * Get the znode name of the JobObject.
+	 */
 	public String getJobNodeName() {
-		return jobId.toString() + "-" + nValue.toString();
+		return jobId.toString() + "-" + qValue.toString();
 	}
 
+	/**
+	 * Get the zookeeper path to the parent of this job
+	 */
 	public String getJobpoolParentPath() {
 		return JOBPOOL_PATH + "/" + jobId.toString();
 	}
 
+	/**
+	 * Get the zookeeper path to this job
+	 */
 	public String getJobpoolPath() {
 		return getJobpoolParentPath() + "/" + getJobNodeName();
 	}
 
-
-
-	// Get the string representation of the data in the znode
-	// when this job is in jobpool/worker
+	/**
+	 * Get the string representation of the job to store in znode.
+	 */
 	public String toJobDataString() {
-		// Formate: "jobId:nValue:inputFile"
-		return jobId.toString() + DELIMITER + nValue.toString() + DELIMITER + inputFile;
+		return jobId.toString() + DELIMITER + qValue.toString() + DELIMITER + inputFile;
 	}
-	
-
-	// TODO: this is not yet used
-	// Get the string representation of the data in the znode
-	// when this job is in result
-	public String toResultDataString() {
-		// Formate: "jobId:nValue:outputFile:completionTime"
-		return jobId.toString() + DELIMITER + nValue.toString() + DELIMITER + outputFile + DELIMITER + completionTime.toString();
-	}
-
 }
