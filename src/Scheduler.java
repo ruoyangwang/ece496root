@@ -525,6 +525,7 @@ public class Scheduler {
 	 *
 	 * NOTE: This is currently not used but may be helpful
 	 * 		 to have for future scheduling algo.
+	 *		(Not well tested)
 	 *
 	 * @return - a hashtable of lists of JobObjects keyed by worker names
 	 */

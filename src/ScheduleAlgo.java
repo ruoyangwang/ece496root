@@ -10,7 +10,7 @@ class ScheduleAlgo {
 	/**
 	 * Schedule jobs to workers given a list of jobs and workers.
 	 * 
-	 * NOTE: A list of jobs currenly executing by each worker can be provided. See Scheduler.java
+	 * NOTE: A list of jobs currenly executing by each worker can be provided. See Scheduler.java getCurrentWorkerJobs()
 	 * 
 	 * @param workersList - a list of workers connected to the system
 	 * @param jobsList - a list of unstarted jobs
