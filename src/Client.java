@@ -25,7 +25,7 @@ public class Client {
     static ObjectInputStream Sin = null;
     static ObjectOutputStream Sout = null;
 
-	final static boolean DEBUG = false;
+	final static boolean DEBUG = true;
 
 	/**
 	 * Connection to jobtracker with jobtracker location information from zookeeper.

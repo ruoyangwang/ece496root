@@ -50,7 +50,7 @@ public class Scheduler {
 	final static String JOBS_PATH = "/jobs";
 	final static String JOBPOOL_PATH = "/jobpool";
 
-	final static boolean DEBUG = false;
+	final static boolean DEBUG = true;
 
 	/** 
      * constructor for job tracker

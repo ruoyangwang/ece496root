@@ -56,7 +56,7 @@ public class JobTracker {
 	final static String JOBPOOL_PATH = "/jobpool";
 	final static String CURRENT_JOB_PATH = "/currentJob";
 
-	final static boolean DEBUG = false;
+	final static boolean DEBUG = true;
 
 	// host and port number for the zookeeper
 	static String ZookeeperLocation = null;

@@ -28,7 +28,7 @@ public class HandleClient extends Thread {
 	final String KILL = "kill";
 	final String ADD = "add";
 
-	final static boolean DEBUG = false;
+	static boolean DEBUG;
 
 	/** 
 	 * Constructor for handle client.
@@ -144,6 +144,9 @@ public class HandleClient extends Thread {
 	 * Handle client requests.
 	 */
 	public void run() {
+		// Set debug flag the same as JobTracker
+		DEBUG = JobTracker.DEBUG;
+
 		try {
 			boolean waitForWorkerCreation = false;
 			String packetFromClient;
