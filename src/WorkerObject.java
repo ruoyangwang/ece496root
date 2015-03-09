@@ -83,9 +83,16 @@ public class WorkerObject {
 			}
 			else{
 				System.out.println("start to execute init_NPAIRS script.......");
-				String command = "sh ../NPAIRS/init_NPAIRS.sh "+filename+" &> ~/init_npairs_runtime.log";	
-			
+				//String command = "sh ../NPAIRS/init_NPAIRS.sh "+filename+" &> ~/init_npairs_runtime.log";	
+				String command = "sh ../NPAIRS/init_NPAIRS.sh "+filename;	
 				Process p = Runtime.getRuntime().exec(command);
+
+				StreamGobbler errLog = new StreamGobbler(p.getErrorStream() ,"ERROR");
+				StreamGobbler outputLog = new StreamGobbler(p.getInputStream() ,"OUTPUT");
+
+				errLog.start();
+				outputLog.start();
+
 				int retcode = p.waitFor();
 				return 7;		//for testing purpose, simply return 7 for now 
 				/*now run benchmark*/
