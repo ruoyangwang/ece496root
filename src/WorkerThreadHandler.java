@@ -1,11 +1,19 @@
+/*
+ *WorkerThreadHandler is thread created from Worker.java
+ *Its main responsibility is to execute NPAIRS with file input name and Q value
+ *after it is done, it will return and create freeWorker and Result 
+ *	@Author Ruoyang (Leo) Wang, ruoyang.wang@mail.utoronto.ca
+*/
 import java.net.*;
 import java.io.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 public class WorkerThreadHandler implements Runnable {
+		//the name of the dataset that we want to execute on
 		String inputName;
 		String currentJob;
+		//Thread unique ID
 		static private int threadNumber=0;
 		int Qvalue;
 		int jobID;
@@ -15,13 +23,15 @@ public class WorkerThreadHandler implements Runnable {
 				long startTime = System.currentTimeMillis();
 				int retcode = -1;					     			
 				 try{ 
-													//mock of execution, depends on where we put zookeeper and NPAIRS executables we can change shell command 
+													
 					System.out.println("executing jobs.....");
-					//String command = "sh ../execute/execute.sh " + this.inputLocation+" "+ this.Qvalue;	
+
 					String command = "sh ../execute/execute.sh "+this.inputName + " "+this.Qvalue;
-					//Process p = Runtime.getRuntime().exec(command);
-					//retcode=p.waitFor();
-						
+
+					/* Script from run_NPAIRS.sh will detect if the execution of this job has an issue
+					 * return code will be 1 or 2 if error occur
+					 * Worker re-execute the same job until a success execution (return code is 0)
+					 */	
 					while(retcode!=0){
 						Process p = Runtime.getRuntime().exec(command);
 						retcode=p.waitFor();
@@ -30,9 +40,9 @@ public class WorkerThreadHandler implements Runnable {
 						
 				} catch (Exception e) {
 						e.printStackTrace();
-				}	//TODO:assume this is running the child node for now
+				}	
 												
-							                	 	
+					//calculate this job's execution time		 	               	 	
 					long endTime = System.currentTimeMillis();	                            		
 					long executionTime = (endTime - startTime);
 					Worker.Thread_complete(executionTime, retcode, this.currentJob, this.threadNumber, this.Qvalue, this.inputName, this.jobID);
@@ -46,6 +56,8 @@ public class WorkerThreadHandler implements Runnable {
 			this.jobID=jobid;
 		
 		}
+
+		/*Not yet used */
 		public int get_thread_number(){
 			return this.threadNumber;
 		}

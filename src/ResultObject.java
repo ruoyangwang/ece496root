@@ -1,3 +1,16 @@
+/* Each ResultObject stores information of one execution of NPAIRS 
+ * Important infomration include:
+ *	-hostname of the node that executed this job
+ *	-total execution Time of this job
+ *	-result Location 
+ *	-unqie JobID of this job
+ *	-Q value used to execute this job
+
+ *	@Author Ruoyang (Leo) Wang, ruoyang.wang@mail.utoronto.ca
+ */
+
+
+
 import java.util.*;
 import java.net.*;
 import java.io.*;
@@ -18,6 +31,7 @@ public class ResultObject {
 
 	}
 	
+	//parser function that parse node serialized string 
 	public void parseNodeString(String nodeDataString) {
 		if (nodeDataString == null){
 			return;
