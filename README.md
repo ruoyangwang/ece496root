@@ -2,6 +2,7 @@ ece496root
 ==========
 
 scripts under /bin:
+
 1. start zookeeper service:
 	./startServices.sh ZookeeperNodeHostname (i.e.: ./startServices.sh c123)
 
@@ -16,6 +17,10 @@ scripts under /bin:
 
 
 execution profiles:
+
 /NPAIRS/log/maxJobs.info
+
 change the number to tell worker how many jobs can be execute in parallel for that node
 
+
+All runtime logs will be generated under root directory
